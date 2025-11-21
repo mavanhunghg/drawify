@@ -51,6 +51,48 @@ export const preprocessImage = async (imageBase64, method = 'bilateral', intensi
 };
 
 /**
+ * API chuyển ảnh thành sketch/tranh vẽ tay (Người 2 - Hùng) - CHI TIẾT CAO
+ */
+export const sketchImage = async (
+  imageBase64,
+  smoothingMethod = 'bilateral',
+  intensity = 'medium',
+  edgeMethod = 'canny',
+  detailLevel = 'medium'
+) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sketch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image: imageBase64,
+        smoothing_method: smoothingMethod,
+        intensity: intensity,
+        edge_method: edgeMethod,
+        detail_level: detailLevel,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'Xử lý sketch thất bại');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error creating sketch:', error);
+    throw error;
+  }
+};
+
+/**
  * API chỉ chuyển xám (để test)
  */
 export const grayscaleOnly = async (imageBase64) => {

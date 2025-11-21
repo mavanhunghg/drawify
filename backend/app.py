@@ -1,7 +1,7 @@
 """
 Flask API cho dự án Drawify - Chuyển ảnh thành tranh vẽ
 Người 1 (Hiến): API /preprocess - Grayscale + Smoothing
-Người 2 (Hùng): API /sketch - Edge Detection + Sketch Effect
+Người 2 (Hùng): API /sketch - Edge Detection + Sketch Effect (CHI TIẾT CAO)
 """
 
 from flask import Flask, request, jsonify, send_file
@@ -20,6 +20,7 @@ sys.path.append(current_dir)
 
 import image_processing.grayscale as grayscale_module
 import image_processing.smoothing as smoothing_module
+from image_processing.sketch_effect import sketch_effect, sketch_effect_enhanced, sketch_effect_maximum_detail
 
 convert_to_grayscale = grayscale_module.convert_to_grayscale
 preprocess_for_sketch = smoothing_module.preprocess_for_sketch
@@ -30,7 +31,6 @@ CORS(app)  # Cho phép frontend gọi API
 
 # Cấu hình
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max 16MB
-
 
 def decode_image_from_request(request_data):
     """
@@ -72,7 +72,6 @@ def decode_image_from_request(request_data):
     
     raise ValueError("Không tìm thấy ảnh trong request")
 
-
 def encode_image_to_base64(image):
     """
     Encode ảnh numpy array sang base64 string
@@ -91,7 +90,6 @@ def encode_image_to_base64(image):
     # Chuyển sang base64
     image_base64 = base64.b64encode(buffer).decode('utf-8')
     return f"data:image/png;base64,{image_base64}"
-
 
 # ============================================
 # API CỦA NGƯỜI 1 (HIẾN) - PREPROCESSING
@@ -149,7 +147,6 @@ def preprocess_image():
             'message': f'Lỗi xử lý: {str(e)}'
         }), 400
 
-
 @app.route('/api/grayscale', methods=['POST'])
 def grayscale_only():
     """
@@ -179,22 +176,68 @@ def grayscale_only():
             'message': f'Lỗi: {str(e)}'
         }), 400
 
-
 # ============================================
-# API PLACEHOLDER CHO NGƯỜI 2 (HÙNG)
+# API CỦA NGƯỜI 2 (HÙNG) - SKETCH (CHI TIẾT CAO)
 # ============================================
 
 @app.route('/api/sketch', methods=['POST'])
 def sketch_image():
     """
-    API tạo sketch - Người 2 (Hùng) sẽ implement
-    Hiện tại chỉ là placeholder
+    API tạo sketch - Chi tiết cao với nhiều tùy chọn nét
+    
+    Input:
+        - image: base64 string hoặc file upload
+        - smoothing_method: 'bilateral' (khuyên dùng), 'gaussian', 'median'
+        - intensity: 'light', 'medium', 'strong'
+        - edge_method: 'canny', 'sobel', 'laplacian', 'log'
+        - detail_level: 'light', 'medium', 'enhanced', 'maximum'
+    
+    Output:
+        - success: True/False
+        - image: base64 string (ảnh sketch nét)
+        - message: thông báo
+        - detail_level: mức độ chi tiết đã dùng
     """
-    return jsonify({
-        'success': False,
-        'message': 'API /sketch chưa được implement bởi Người 2 (Hùng)'
-    }), 501  # Not Implemented
-
+    try:
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form.to_dict()
+        
+        image = decode_image_from_request({**data, **request.files})
+        
+        # Lấy tham số
+        smoothing_method = data.get('smoothing_method', 'bilateral')
+        intensity = data.get('intensity', 'medium')
+        edge_method = data.get('edge_method', 'canny')
+        detail_level = data.get('detail_level', 'medium')  # light, medium, enhanced, maximum
+        
+        # Chọn hàm phù hợp theo mức độ chi tiết
+        if detail_level == 'maximum':
+            sketch = sketch_effect_maximum_detail(image, smoothing_method, intensity)
+            detail_msg = 'Chi tiết cực đại'
+        elif detail_level == 'enhanced':
+            sketch = sketch_effect_enhanced(image, smoothing_method, intensity, edge_method, 'strong')
+            detail_msg = 'Chi tiết nâng cao'
+        else:  # medium (mặc định)
+            sketch = sketch_effect(image, smoothing_method, intensity, edge_method)
+            detail_msg = 'Chi tiết vừa'
+        
+        result_base64 = encode_image_to_base64(sketch)
+        
+        return jsonify({
+            'success': True,
+            'image': result_base64,
+            'message': f'Tạo sketch thành công! ({detail_msg})',
+            'shape': list(sketch.shape),
+            'detail_level': detail_level
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Lỗi xử lý sketch: {str(e)}'
+        }), 400
 
 # ============================================
 # HEALTH CHECK & INFO
@@ -207,19 +250,18 @@ def home():
     """
     return jsonify({
         'project': 'Drawify - Image to Sketch',
-        'version': '1.0',
+        'version': '2.0 (Chi tiết cao)',
         'endpoints': {
             'preprocessing': {
                 '/api/preprocess': 'Grayscale + Smoothing (Người 1 - Hiến)',
                 '/api/grayscale': 'Chỉ chuyển xám (test)',
             },
             'sketch': {
-                '/api/sketch': 'Edge Detection + Sketch (Người 2 - Hùng - chưa có)'
+                '/api/sketch': 'Edge Detection + Sketch chi tiết cao (Người 2 - Hùng)'
             }
         },
         'status': 'running'
     })
-
 
 @app.route('/health')
 def health_check():
@@ -227,7 +269,6 @@ def health_check():
     Kiểm tra server hoạt động
     """
     return jsonify({'status': 'healthy', 'message': 'Server đang chạy tốt!'})
-
 
 # ============================================
 # RUN SERVER
@@ -237,7 +278,7 @@ if __name__ == '__main__':
     print("🚀 Starting Drawify API Server...")
     print("📍 Người 1 (Hiến) - Preprocessing API: /api/preprocess")
     print("📍 Test grayscale: /api/grayscale")
-    print("⏳ Người 2 (Hùng) - Sketch API: /api/sketch (chưa có)")
+    print("📍 Người 2 (Hùng) - Sketch API: /api/sketch (CHI TIẾT CAO)")
     print("\n✅ Server sẵn sàng tại: http://localhost:5000")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
