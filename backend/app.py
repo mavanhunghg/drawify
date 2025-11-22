@@ -35,9 +35,10 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max 16MB
 def decode_image_from_request(request_data):
     """
     Giải mã ảnh từ request (base64 hoặc file upload)
+    Hỗ trợ: JPG, PNG, WEBP, AVIF và tất cả format Pillow hỗ trợ
     
     Returns:
-        numpy.ndarray: Ảnh đã decode
+        numpy.ndarray: Ảnh đã decode (BGR format cho OpenCV)
     """
     # Case 1: Base64 string
     if 'image' in request_data:
@@ -49,9 +50,24 @@ def decode_image_from_request(request_data):
             
             # Decode base64
             image_bytes = base64.b64decode(image_data)
-            image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-            image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-            return image
+            
+            # Thử decode bằng Pillow trước (hỗ trợ AVIF, WEBP...)
+            try:
+                import pillow_avif  # Import để enable AVIF support
+                pil_image = Image.open(io.BytesIO(image_bytes))
+                # Convert sang RGB nếu cần
+                if pil_image.mode != 'RGB':
+                    pil_image = pil_image.convert('RGB')
+                # Convert PIL → numpy → BGR (OpenCV format)
+                image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+                return image
+            except:
+                # Fallback: Dùng cv2.imdecode cho JPG/PNG thông thường
+                image_array = np.frombuffer(image_bytes, dtype=np.uint8)
+                image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+                if image is None:
+                    raise ValueError("Không thể decode ảnh")
+                return image
         except Exception as e:
             raise ValueError(f"Lỗi decode base64: {str(e)}")
     
@@ -64,9 +80,24 @@ def decode_image_from_request(request_data):
         try:
             # Đọc file thành bytes
             file_bytes = file.read()
-            image_array = np.frombuffer(file_bytes, dtype=np.uint8)
-            image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-            return image
+            
+            # Thử decode bằng Pillow trước (hỗ trợ AVIF, WEBP...)
+            try:
+                import pillow_avif  # Import để enable AVIF support
+                pil_image = Image.open(io.BytesIO(file_bytes))
+                # Convert sang RGB nếu cần
+                if pil_image.mode != 'RGB':
+                    pil_image = pil_image.convert('RGB')
+                # Convert PIL → numpy → BGR (OpenCV format)
+                image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+                return image
+            except:
+                # Fallback: Dùng cv2.imdecode cho JPG/PNG thông thường
+                image_array = np.frombuffer(file_bytes, dtype=np.uint8)
+                image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+                if image is None:
+                    raise ValueError("Không thể decode ảnh")
+                return image
         except Exception as e:
             raise ValueError(f"Lỗi đọc file: {str(e)}")
     
