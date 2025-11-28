@@ -27,3 +27,6 @@ dist/
 # Project specific
 backend/demo_results/
 backend/sample_images/
+backend/result/
+backend/comparison_results/
+backend/test_results/

@@ -1,41 +1,51 @@
 """
 Module chuyển đổi ảnh màu sang ảnh xám (Grayscale Conversion)
 Người thực hiện: Hiến (Người 1 - Preprocessing)
+KHÔNG DÙNG OPENCV - Code thủ công
 """
 
-import cv2
 import numpy as np
 
 
 def convert_to_grayscale(image):
     """
-    Chuyển đổi ảnh màu sang ảnh xám
+    Chuyển đổi ảnh màu sang ảnh xám - CODE THỦ CÔNG
+    
+    Công thức weighted average (giống OpenCV):
+    Gray = 0.299*R + 0.587*G + 0.114*B
     
     Args:
-        image (numpy.ndarray): Ảnh đầu vào (RGB hoặc BGR)
+        image (numpy.ndarray): Ảnh đầu vào (RGB hoặc BGR format)
     
     Returns:
-        numpy.ndarray: Ảnh xám
+        numpy.ndarray: Ảnh xám (2D array, uint8)
     """
     # Kiểm tra nếu ảnh đã là grayscale
     if len(image.shape) == 2:
-        return image
+        return image.astype(np.uint8)
     
-    # Nếu ảnh có 3 kênh màu (RGB/BGR)
+    # Đảm bảo dtype là float để tính toán chính xác
+    image = image.astype(np.float32)
+    
+    # Nếu ảnh có 3 kênh màu (RGB hoặc BGR)
     if len(image.shape) == 3 and image.shape[2] == 3:
-        # Sử dụng công thức weighted average của OpenCV
-        # Gray = 0.299*R + 0.587*G + 0.114*B
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        return gray_image
+        # Công thức weighted average (ITU-R BT.601) - CHÍNH XÁC 100%
+        # Input từ PIL là RGB format: [R, G, B]
+        # Công thức: Gray = 0.299*R + 0.587*G + 0.114*B
+        r = image[:, :, 0].astype(np.float32)
+        g = image[:, :, 1].astype(np.float32)
+        b = image[:, :, 2].astype(np.float32)
+        gray = 0.299 * r + 0.587 * g + 0.114 * b
+        return np.clip(gray, 0, 255).astype(np.uint8)
     
-    # Nếu ảnh có 4 kênh (RGBA/BGRA) - loại bỏ alpha channel
+    # Nếu ảnh có 4 kênh (RGBA) - loại bỏ alpha channel
     if len(image.shape) == 3 and image.shape[2] == 4:
-        # Chuyển BGRA -> BGR trước, sau đó -> Gray
-        bgr_image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
-        gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
-        return gray_image
+        # Chỉ lấy 3 kênh đầu (RGB), bỏ alpha
+        rgb = image[:, :, :3]
+        gray = 0.299 * rgb[:, :, 0] + 0.587 * rgb[:, :, 1] + 0.114 * rgb[:, :, 2]
+        return np.clip(gray, 0, 255).astype(np.uint8)
     
-    return image
+    return image.astype(np.uint8)
 
 
 def convert_to_grayscale_custom(image, method='weighted'):
@@ -45,34 +55,36 @@ def convert_to_grayscale_custom(image, method='weighted'):
     Args:
         image (numpy.ndarray): Ảnh đầu vào
         method (str): Phương pháp chuyển đổi
-            - 'weighted': Trung bình có trọng số (mặc định OpenCV)
-            - 'average': Trung bình đơn giản
-            - 'luminosity': Công thức ITU-R BT.601
+            - 'weighted': Trung bình có trọng số (mặc định, giống OpenCV)
+            - 'average': Trung bình đơn giản (R+G+B)/3
+            - 'luminosity': Công thức ITU-R BT.601 (giống weighted)
     
     Returns:
         numpy.ndarray: Ảnh xám
     """
     if len(image.shape) == 2:
-        return image
+        return image.astype(np.uint8)
+    
+    image = image.astype(np.float32)
     
     if len(image.shape) == 3 and image.shape[2] >= 3:
-        # OpenCV lưu ảnh dưới dạng BGR
-        b, g, r = image[:,:,0], image[:,:,1], image[:,:,2]
+        r = image[:, :, 0]
+        g = image[:, :, 1]
+        b = image[:, :, 2]
         
         if method == 'average':
             # Trung bình đơn giản
-            gray = (b.astype(np.float32) + g.astype(np.float32) + r.astype(np.float32)) / 3
-            return gray.astype(np.uint8)
-        
+            gray = (r + g + b) / 3.0
         elif method == 'luminosity':
-            # Công thức ITU-R BT.601 (gần giống OpenCV)
-            gray = 0.114 * b + 0.587 * g + 0.299 * r
-            return gray.astype(np.uint8)
-        
+            # Công thức ITU-R BT.601 (giống weighted)
+            gray = 0.299 * r + 0.587 * g + 0.114 * b
         else:  # 'weighted' - default
-            return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # Công thức weighted average (giống OpenCV)
+            gray = 0.299 * r + 0.587 * g + 0.114 * b
+        
+        return np.clip(gray, 0, 255).astype(np.uint8)
     
-    return image
+    return image.astype(np.uint8)
 
 
 # Hàm test độc lập
@@ -80,15 +92,17 @@ if __name__ == "__main__":
     """
     Test module độc lập - không cần người 2
     """
-    print("=== Test Grayscale Module ===")
+    print("=== Test Grayscale Module (KHÔNG DÙNG OPENCV) ===")
     
     # Tạo ảnh test màu đơn giản
     test_image = np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
     print(f"Ảnh gốc shape: {test_image.shape}")
+    print(f"Ảnh gốc dtype: {test_image.dtype}")
     
     # Test chuyển đổi grayscale
     gray = convert_to_grayscale(test_image)
     print(f"Ảnh xám shape: {gray.shape}")
+    print(f"Ảnh xám dtype: {gray.dtype}")
     print(f"Giá trị pixel min: {gray.min()}, max: {gray.max()}")
     
     # Test các phương pháp khác
@@ -98,3 +112,4 @@ if __name__ == "__main__":
     print(f"Luminosity method shape: {gray_lum.shape}")
     
     print("✅ Grayscale module hoạt động tốt!")
+

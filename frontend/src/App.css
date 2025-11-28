@@ -31,34 +31,46 @@ section h2 { margin-bottom: 1.5rem; color: var(--primary-color); font-size: 1.5r
 .setting-group { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
 .setting-group label { color: rgba(255,255,255,0.9); font-weight: 500; font-size: 1rem; }
 
-/* Select dropdown - SỬA ĐỂ THẤY RÕ */
-.select { 
+/* Select dropdown - MÀU SÁNG, DỄ NHÌN */
+select { 
   padding: 0.75rem; 
   border-radius: 8px; 
-  border: 2px solid rgba(100,108,255,0.3); 
-  background-color: #2a2a2a; 
-  color: #ffffff; 
+  border: 2px solid rgba(100,108,255,0.5); 
+  background-color: #1e1e1e; 
+  color: #ffffff !important; 
   font-size: 1rem; 
   font-weight: 500;
   cursor: pointer;
+  width: 100%;
+  transition: all 0.3s ease;
 }
-.select:hover {
+
+select:hover {
   border-color: var(--primary-color);
-  background-color: #333;
+  background-color: #252525;
+  box-shadow: 0 0 0 2px rgba(100,108,255,0.1);
 }
-.select:focus {
+
+select:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(100,108,255,0.2);
+  background-color: #252525;
+  box-shadow: 0 0 0 3px rgba(100,108,255,0.3);
 }
-.select option {
-  background-color: #2a2a2a;
-  color: #ffffff;
-  padding: 0.5rem;
-  font-size: 1rem;
+
+select option {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+  padding: 0.75rem !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
 }
-.select option:hover {
-  background-color: var(--primary-color);
+
+select option:hover,
+select option:checked,
+select option:focus {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
 }
 
 .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.3s; }
