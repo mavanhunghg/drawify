@@ -1,58 +1,22 @@
-# 🎨 Drawify Backend - Chuyển Ảnh Thành Tranh Vẽ
+# 🎨 Drawify Backend - Preprocessing Module
 
-## 📚 Đề tài 4: Xây dựng phần mềm chuyển ảnh thành tranh vẽ (Chương 5)
+## 👤 Người thực hiện: Hiến
 
-### 🎯 Yêu cầu đề bài:
-- ✅ Phát hiện biên (Edge Detection)
-- ✅ Chuyển đổi mức xám (Grayscale)
-- ✅ Kỹ thuật làm mịn (Smoothing)
-- ✅ Tạo hiệu ứng vẽ tay (Sketch Effect)
-- ✅ Sử dụng Bilateral Filter hoặc Edge-Preserving Filter
+## 📚 Đề tài: Xây dựng phần mềm chuyển ảnh thành tranh vẽ - PHẦN TIỀN XỬ LÝ
 
----
-
-## 👥 Phân công công việc
-
-### 👤 Người 1 (Hiến) - PREPROCESSING ✅ HOÀN THÀNH
-**Công việc**: Tiền xử lý ảnh (Grayscale + Smoothing)
-
-**Các module đã hoàn thành**:
-- ✅ `image_processing/grayscale.py` - Chuyển đổi mức xám
-- ✅ `image_processing/smoothing.py` - Làm mịn ảnh (Gaussian, Bilateral, Median)
-- ✅ API `/api/preprocess` - Grayscale + Smoothing
-- ✅ API `/api/grayscale` - Test chuyển xám
-
-**Tính năng**:
-- Chuyển ảnh màu sang xám (RGB/BGR → Grayscale)
-- 3 phương pháp làm mịn:
+### 🎯 Chức năng:
+- ✅ Chuyển đổi ảnh màu sang xám (Grayscale Conversion)
+- ✅ Làm mịn ảnh với 3 phương pháp:
   - **Bilateral Filter** ⭐ KHUYÊN DÙNG (giữ biên, loại nhiễu)
   - Gaussian Blur (làm mịn đều)
   - Median Blur (loại nhiễu muối tiêu)
-- 3 mức độ: light, medium, strong
+- ✅ 3 mức độ: light, medium, strong
 
-**API Endpoint**:
-```
-POST /api/preprocess
-Body: {
-  "image": "base64 string",
-  "method": "bilateral",  // gaussian, median
-  "intensity": "medium"   // light, strong
-}
-```
-
-**Trạng thái**: ✅ Độc lập 100%, có thể demo ngay
-
----
-
-### 👤 Người 2 (Hùng) - EDGE DETECTION + SKETCH
-**Công việc**: Phát hiện biên + Tạo hiệu ứng sketch
-
-**Các module cần làm**:
-- `image_processing/edge_detect.py` - Phát hiện biên (Sobel, Canny, Laplacian)
-- `image_processing/sketch_effect.py` - Tạo hiệu ứng vẽ tay
-- API `/api/sketch` - Edge Detection + Sketch Effect
-
-**Trạng thái**: ⏳ Chưa làm (placeholder có sẵn trong app.py)
+### ⚠️ **QUAN TRỌNG: KHÔNG DÙNG OPENCV**
+Code được viết **hoàn toàn thủ công**, chỉ dùng:
+- ✅ NumPy (array operations, math)
+- ✅ PIL/Pillow (đọc/ghi ảnh)
+- ✅ Flask (API server)
 
 ---
 
@@ -60,222 +24,219 @@ Body: {
 
 ```
 backend/
-├── app.py                          # Flask API server
-├── requirements.txt                 # Dependencies
-├── test_api.py                      # Script test API
-├── demo_preprocessing.py            # Demo với ảnh thực
-├── HUONG_DAN_NGUOI_1.md            # Hướng dẫn chi tiết Người 1
-│
-├── image_processing/                # Package xử lý ảnh
+├── app.py                          # Flask API server (chỉ Hiến)
+├── requirements.txt                # NumPy + Pillow + Flask
+├── test_hiến.py                    # Test file độc lập
+├── README.md                       # File này
+├── image_processing/
 │   ├── __init__.py
-│   ├── grayscale.py                 # ✅ Người 1: Chuyển xám
-│   ├── smoothing.py                 # ✅ Người 1: Làm mịn
-│   ├── edge_detect.py               # ⏳ Người 2: Phát hiện biên
-│   └── sketch_effect.py             # ⏳ Người 2: Hiệu ứng sketch
-│
-├── sample_images/                   # Ảnh mẫu để test
-│   ├── sample_gradient.png
-│   ├── sample_geometric.png
-│   └── sample_noisy.png
-│
-└── demo_results/                    # Kết quả demo
-    ├── *_0_original.png             # Ảnh gốc
-    ├── *_1_grayscale.png            # Ảnh xám
-    └── *_2_*.png                    # Ảnh đã làm mịn
+│   ├── grayscale.py                # Chuyển xám (CODE THỦ CÔNG)
+│   └── smoothing.py                # Làm mịn (CODE THỦ CÔNG)
+├── utils/
+│   ├── __init__.py
+│   ├── convolution.py              # Helper: 2D convolution
+│   └── image_io.py                 # Helper: Đọc/ghi ảnh
+└── sample_images/                   # Ảnh test
 ```
 
 ---
 
-## 🚀 Hướng dẫn sử dụng
+## 🚀 Cài đặt và chạy
 
-### 1️⃣ Cài đặt môi trường
+### 1. Cài đặt dependencies
 
-```powershell
-# Clone/download dự án
+```bash
 cd backend
-
-# (Đã có virtual environment: .venv)
-# Activate (nếu cần):
-.\.venv\Scripts\Activate.ps1
-
-# Cài packages (đã cài sẵn):
 pip install -r requirements.txt
 ```
 
-**Dependencies**:
-- Flask 3.0.0
-- opencv-python 4.8.1.78
-- numpy 1.26.2
-- Pillow 10.1.0
-- flask-cors 4.0.0
+### 2. Test module (không cần server)
 
----
-
-### 2️⃣ Test modules độc lập
-
-```powershell
-# Test grayscale module
-python image_processing/grayscale.py
-
-# Test smoothing module
-python image_processing/smoothing.py
+```bash
+python test_hiến.py
 ```
 
-Kết quả: Hiển thị "✅ Module hoạt động tốt!"
+### 3. Chạy API server
 
----
-
-### 3️⃣ Chạy Flask Server
-
-```powershell
+```bash
 python app.py
 ```
 
-Server chạy tại: **http://localhost:5000**
-
-**Endpoints có sẵn**:
-- `GET /` - API info
-- `GET /health` - Health check
-- `POST /api/grayscale` - Chỉ chuyển xám
-- `POST /api/preprocess` - ⭐ Grayscale + Smoothing (Người 1)
-- `POST /api/sketch` - ⏳ Edge + Sketch (Người 2 - chưa có)
+Server sẽ chạy tại: `http://localhost:5000`
 
 ---
 
-### 4️⃣ Test API
+## 📡 API Endpoints
 
-**Cách 1: Dùng test_api.py** (Khuyên dùng)
+### 1. `/api/preprocess` - Tiền xử lý ảnh
 
-```powershell
-# Mở terminal mới (server vẫn chạy)
-python test_api.py
-```
+**Chức năng**: Grayscale + Smoothing
 
-**Cách 2: Dùng Postman/Thunder Client**
+**Method**: POST
 
-Request:
-```
-POST http://localhost:5000/api/preprocess
-Content-Type: application/json
-
+**Input** (JSON hoặc FormData):
+```json
 {
-  "image": "data:image/png;base64,iVBORw0KG...",
+  "image": "base64_string_hoặc_file_upload",
+  "method": "bilateral",  // bilateral, gaussian, median
+  "intensity": "medium"    // light, medium, strong
+}
+```
+
+**Output**:
+```json
+{
+  "success": true,
+  "image": "data:image/png;base64,...",
+  "message": "Xử lý thành công với bilateral filter (medium)",
+  "shape": [height, width],
   "method": "bilateral",
   "intensity": "medium"
 }
 ```
 
----
+### 2. `/api/grayscale` - Chỉ chuyển xám
 
-### 5️⃣ Demo với ảnh thực
+**Chức năng**: Test riêng grayscale (không smoothing)
 
-```powershell
-# Demo với ảnh có sẵn
-python demo_preprocessing.py path/to/your/image.jpg
+**Method**: POST
 
-# Hoặc tự tạo ảnh mẫu và demo
-python demo_preprocessing.py
+**Input**:
+```json
+{
+  "image": "base64_string_hoặc_file_upload"
+}
 ```
 
-Kết quả lưu trong thư mục `demo_results/`
-
----
-
-## 🧪 Kết quả kiểm thử
-
-### ✅ Đã test thành công:
-- [x] Module grayscale.py - Chuyển xám OK
-- [x] Module smoothing.py - Làm mịn OK (Bilateral, Gaussian, Median)
-- [x] API /api/preprocess - Hoạt động tốt
-- [x] API /api/grayscale - Test OK
-- [x] Demo với 3 ảnh mẫu - Tạo 21 files kết quả
-
-### 📸 So sánh kết quả:
-
-| Phương pháp | Đặc điểm | Dùng cho |
-|------------|----------|---------|
-| **Bilateral Filter** ⭐ | Giữ biên, loại nhiễu | **Sketch effect** (khuyên dùng) |
-| Gaussian Blur | Làm mịn đều toàn bộ | Ảnh mịn chung |
-| Median Blur | Loại nhiễu muối tiêu | Ảnh có nhiễu điểm |
-
----
-
-## 🔗 Tích hợp 2 phần
-
-### Cách 1: Frontend gọi 2 API tuần tự
-```javascript
-// Step 1: Preprocess (Người 1)
-const preprocessed = await fetch('/api/preprocess', {
-  method: 'POST',
-  body: JSON.stringify({ image: base64Image })
-});
-const smoothImage = await preprocessed.json();
-
-// Step 2: Sketch (Người 2)
-const sketch = await fetch('/api/sketch', {
-  method: 'POST',
-  body: JSON.stringify({ image: smoothImage.image })
-});
+**Output**:
+```json
+{
+  "success": true,
+  "image": "data:image/png;base64,...",
+  "message": "Chuyển sang xám thành công",
+  "shape": [height, width]
+}
 ```
 
-### Cách 2: Backend tự ghép (1 API)
+### 3. `/` - Trang chủ API
+
+**Method**: GET
+
+**Output**: Thông tin API
+
+### 4. `/health` - Health check
+
+**Method**: GET
+
+**Output**: Trạng thái server
+
+---
+
+## 🔬 Chi tiết kỹ thuật
+
+### 1. Grayscale Conversion (`grayscale.py`)
+
+**Công thức**: Weighted Average (ITU-R BT.601)
+```
+Gray = 0.299*R + 0.587*G + 0.114*B
+```
+
+**Code thủ công**:
 ```python
-@app.route('/api/full-sketch', methods=['POST'])
-def full_sketch():
-    # Người 1
-    gray = convert_to_grayscale(image)
-    smooth = preprocess_for_sketch(gray)
-    
-    # Người 2
-    edges = detect_edges(smooth)  # Hùng viết
-    sketch = create_sketch(edges)  # Hùng viết
-    
-    return sketch
+def convert_to_grayscale(image):
+    r = image[:, :, 0].astype(np.float32)
+    g = image[:, :, 1].astype(np.float32)
+    b = image[:, :, 2].astype(np.float32)
+    gray = 0.299 * r + 0.587 * g + 0.114 * b
+    return np.clip(gray, 0, 255).astype(np.uint8)
 ```
 
+### 2. Smoothing (`smoothing.py`)
+
+#### a. Bilateral Filter ⭐ TỐT NHẤT
+
+**Đặc điểm**:
+- Làm mịn nhiễu nhưng GIỮ SẮC NÉT cạnh/biên
+- Rất tốt cho bài tập sketch (cần giữ biên)
+
+**Thuật toán**:
+1. Với mỗi pixel, xét các pixel lân cận trong radius `d`
+2. Tính weight dựa trên:
+   - Khoảng cách không gian: `exp(-||p-q||²/(2σs²))`
+   - Khác biệt màu: `exp(-||I(p)-I(q)||²/(2σr²))`
+3. Weighted average
+
+**Tham số**:
+- `d`: Đường kính vùng lân cận (9 mặc định)
+- `sigma_color`: Sigma cho màu sắc (75)
+- `sigma_space`: Sigma cho không gian (75)
+
+**Code**:
+```python
+def apply_bilateral_filter(image, d=9, sigma_color=75, sigma_space=75):
+    # CODE THỦ CÔNG - không dùng OpenCV
+    # ... (xem chi tiết trong file)
+```
+
+#### b. Gaussian Blur
+
+**Đặc điểm**: Làm mịn đều, giảm nhiễu Gaussian
+
+**Công thức kernel**:
+```
+G(x,y) = (1/(2πσ²)) * exp(-(x²+y²)/(2σ²))
+```
+
+#### c. Median Blur
+
+**Đặc điểm**: Loại bỏ nhiễu muối tiêu (salt-and-pepper noise)
+
+**Thuật toán**: Lấy giá trị median trong window kích thước `kernel_size`
+
 ---
 
-## 📊 Đánh giá
+## ✅ Kết quả test
 
-### ✅ Điểm mạnh:
-- **Phân công rõ ràng**: Người 1 & 2 làm song song, không phụ thuộc
-- **Độc lập 100%**: Mỗi người test riêng, không chặn nhau
-- **Đúng yêu cầu đề bài**: Grayscale + Smoothing + Edge Detection
-- **Áp dụng kỹ thuật tốt**: Bilateral Filter (edge-preserving)
-- **API RESTful**: Dễ tích hợp với frontend
-- **Có demo trực quan**: Lưu ảnh kết quả để so sánh
+```
+TEST 1: GRAYSCALE CONVERSION          ✅ PASSED
+TEST 2: GAUSSIAN BLUR                 ✅ PASSED
+TEST 3: MEDIAN BLUR                   ✅ PASSED
+TEST 4: BILATERAL FILTER              ✅ PASSED (QUAN TRỌNG NHẤT)
+TEST 5: PREPROCESS_FOR_SKETCH         ✅ PASSED
+TEST 6: TEST VỚI ẢNH THẬT             ✅ PASSED
+```
 
-### 🎯 Đạt yêu cầu nghiệm thu:
-- ✅ Tải/lưu ảnh (API nhận base64 hoặc file upload)
-- ✅ Xử lý ảnh y tế, tự nhiên, công nghiệp (test với nhiều loại ảnh)
-- ✅ Xem kết quả trực quan (API trả về ảnh base64, frontend hiển thị)
-- ✅ Dùng Bilateral Filter (edge-preserving filter)
+**Tất cả test đều PASSED!** ✅
 
 ---
 
-## 📝 Tài liệu tham khảo
+## 📊 So sánh các phương pháp
 
-- [Hướng dẫn chi tiết Người 1](HUONG_DAN_NGUOI_1.md)
-- OpenCV Documentation: https://docs.opencv.org/
-- Bilateral Filter: https://en.wikipedia.org/wiki/Bilateral_filter
-
----
-
-## 👨‍💻 Tác giả
-
-- **Người 1 (Hiến)**: Preprocessing (Grayscale + Smoothing) ✅
-- **Người 2 (Hùng)**: Edge Detection + Sketch Effect ⏳
+| Phương pháp | Ưu điểm | Nhược điểm | Dùng khi nào |
+|------------|---------|------------|--------------|
+| **Bilateral** ⭐ | Giữ biên, loại nhiễu tốt | Chậm hơn Gaussian | **KHUYÊN DÙNG** cho sketch |
+| Gaussian | Nhanh, mịn đều | Làm mờ biên | Ảnh ít chi tiết |
+| Median | Tốt với nhiễu muối tiêu | Không giữ biên tốt | Ảnh có nhiễu đốm |
 
 ---
 
-## 📞 Hỗ trợ
+## 🎯 Kết luận
 
-Gặp vấn đề kỹ thuật:
-1. Kiểm tra Python virtual environment đã activate chưa
-2. Kiểm tra packages đã cài đầy đủ: `pip list`
-3. Kiểm tra server đang chạy: http://localhost:5000/health
-4. Xem log lỗi trong terminal
+Module preprocessing của Hiến đã:
+- ✅ Hoàn thành 100% yêu cầu
+- ✅ Code thủ công không dùng OpenCV
+- ✅ Bilateral Filter hoạt động xuất sắc (edge-preserving)
+- ✅ API độc lập, test thành công
+- ✅ Sẵn sàng tích hợp với frontend
+
+**Phương pháp khuyên dùng**: `bilateral` với intensity `medium` hoặc `strong`
 
 ---
 
-**⭐ Good luck với dự án! 🚀**
+## 📞 Liên hệ
+
+**Người thực hiện**: Hiến  
+**Phần**: Preprocessing (Grayscale + Smoothing)  
+**Trạng thái**: ✅ Hoàn thành, đã test
+
+

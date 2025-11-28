@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { preprocessImage, fileToBase64, downloadImage, checkServerHealth, sketchImage } from './api/imageApi'
+import { preprocessImage, fileToBase64, downloadImage, checkServerHealth, grayscaleOnly, sketchImage, fullPipeline } from './api/imageApi'
 
 function App() {
   const [originalImage, setOriginalImage] = useState(null)
@@ -12,16 +12,20 @@ function App() {
   const [serverOnline, setServerOnline] = useState(false)
   const [processingInfo, setProcessingInfo] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [mode, setMode] = useState('preprocess')
+  const [mode, setMode] = useState('preprocess') // preprocess, grayscale, hoặc sketch
   const [edgeMethod, setEdgeMethod] = useState('canny')
   const [detailLevel, setDetailLevel] = useState('medium')
 
   // Kiểm tra server khi load trang
   useEffect(() => {
     checkServerHealth().then(setServerOnline)
+    const interval = setInterval(() => {
+      checkServerHealth().then(setServerOnline)
+    }, 5000) // Check mỗi 5 giây
+    return () => clearInterval(interval)
   }, [])
 
-  // Hàm xử lý file chung (dùng cho cả upload và drag & drop)
+  // Hàm xử lý file
   const processImageFile = async (file) => {
     if (!file) return
     if (!file.type.startsWith('image/')) {
@@ -39,27 +43,25 @@ function App() {
     }
   }
 
-  // Xử lý upload ảnh từ input
+  // Xử lý upload ảnh
   const handleImageUpload = async (event) => {
     const file = event.target.files[0]
     await processImageFile(file)
   }
 
-  // Xử lý drag over
+  // Xử lý drag & drop
   const handleDragOver = (e) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(true)
   }
 
-  // Xử lý drag leave
   const handleDragLeave = (e) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
   }
 
-  // Xử lý drop
   const handleDrop = async (e) => {
     e.preventDefault()
     e.stopPropagation()
@@ -70,14 +72,14 @@ function App() {
     }
   }
 
-  // Xử lý ảnh preprocess (xám + mịn)
-  const handleProcessImage = async () => {
+  // Xử lý Preprocessing (Grayscale + Smoothing)
+  const handlePreprocess = async () => {
     if (!originalImage) {
       setError('Vui lòng tải ảnh lên trước!')
       return
     }
     if (!serverOnline) {
-      setError('Backend server chưa chạy! Vui lòng chạy: python app.py')
+      setError('Backend server chưa chạy! Vui lòng chạy: cd backend && python app.py')
       return
     }
     setLoading(true)
@@ -86,7 +88,6 @@ function App() {
       const result = await preprocessImage(originalImage, method, intensity)
       setProcessedImage(result.image)
       setProcessingInfo({
-        mode: 'preprocess',
         method: result.method,
         intensity: result.intensity,
         message: result.message,
@@ -99,46 +100,118 @@ function App() {
     }
   }
 
-  // Xử lý ảnh Sketch
-  const handleSketchImage = async () => {
+  // Xử lý chỉ Grayscale (test)
+  const handleGrayscale = async () => {
     if (!originalImage) {
       setError('Vui lòng tải ảnh lên trước!')
       return
     }
     if (!serverOnline) {
-      setError('Backend server chưa chạy! Vui lòng chạy: python app.py')
+      setError('Backend server chưa chạy!')
       return
     }
     setLoading(true)
     setError(null)
     try {
-      const result = await sketchImage(originalImage, method, intensity, edgeMethod, detailLevel)
+      const result = await grayscaleOnly(originalImage)
       setProcessedImage(result.image)
       setProcessingInfo({
-        mode: 'sketch',
-        method,
-        intensity,
-        edgeMethod,
-        detailLevel,
+        method: 'grayscale',
         message: result.message,
         shape: result.shape
       })
     } catch (err) {
-      setError('Lỗi xử lý sketch: ' + err.message)
+      setError('Lỗi chuyển xám: ' + err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  // Download ảnh kết quả
+  // Xử lý Full Pipeline (Hiến + Hùng)
+  const handleFullPipeline = async () => {
+    if (!originalImage) {
+      setError('Vui lòng tải ảnh lên trước!')
+      return
+    }
+    if (!serverOnline) {
+      setError('Backend server chưa chạy! Vui lòng chạy: cd backend && python app.py')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await fullPipeline(
+        originalImage,
+        method,  // smoothing_method
+        intensity,
+        edgeMethod,
+        detailLevel
+      )
+      setProcessedImage(result.image)
+      setProcessingInfo({
+        method: 'full-pipeline',
+        smoothing_method: method,
+        intensity: intensity,
+        edge_method: edgeMethod,
+        detail_level: detailLevel,
+        message: result.message,
+        shape: result.shape,
+        steps: result.steps,
+        pipeline: result.pipeline
+      })
+    } catch (err) {
+      setError('Lỗi xử lý pipeline: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Xử lý Sketch (Hùng - Edge Detection)
+  const handleSketch = async () => {
+    if (!originalImage) {
+      setError('Vui lòng tải ảnh lên trước!')
+      return
+    }
+    if (!serverOnline) {
+      setError('Backend server chưa chạy! Vui lòng chạy: cd backend && python app.py')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await sketchImage(
+        originalImage,
+        method,  // smoothing_method
+        intensity,
+        edgeMethod,
+        detailLevel
+      )
+      setProcessedImage(result.image)
+      setProcessingInfo({
+        method: 'sketch',
+        smoothing_method: method,
+        intensity: intensity,
+        edge_method: edgeMethod,
+        detail_level: detailLevel,
+        message: result.message,
+        shape: result.shape
+      })
+    } catch (err) {
+      setError('Lỗi tạo sketch: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Download ảnh
   const handleDownload = () => {
     if (processedImage) {
-      const filename = `drawify_${mode}_${method}_${intensity}_${mode === 'sketch' ? edgeMethod : ''}_${Date.now()}.png`
+      const filename = `preprocessed_${method}_${intensity}_${Date.now()}.png`
       downloadImage(processedImage, filename)
     }
   }
 
-  // Reset tất cả
+  // Reset
   const handleReset = () => {
     setOriginalImage(null)
     setProcessedImage(null)
@@ -149,25 +222,27 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1><i className="fas fa-palette"></i> Drawify - Image Preprocessing & Sketch</h1>
+        <h1>🎨 Drawify - Preprocessing (Hiến)</h1>
         <div className={`server-status ${serverOnline ? 'online' : 'offline'}`}>
-          {serverOnline ? <><i className="fas fa-check-circle"></i> Server đang chạy</> : <><i className="fas fa-times-circle"></i> Server offline - Chạy: python app.py</>}
+          {serverOnline ? (
+            <>✅ Server đang chạy</>
+          ) : (
+            <>❌ Server offline - Chạy: cd backend && python app.py</>
+          )}
         </div>
       </header>
 
       <main className="main">
         {/* Upload Section */}
         <section className="upload-section">
-          <h2><i className="fas fa-upload"></i> Bước 1: Tải ảnh lên</h2>
-          {/* Drag & Drop Zone */}
+          <h2>📤 Bước 1: Tải ảnh lên</h2>
           <div
             className={`drop-zone ${isDragging ? 'dragging' : ''}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <i className="fas fa-cloud-upload-alt"></i>
-            <p>Kéo thả ảnh vào đây</p>
+            <p>📁 Kéo thả ảnh vào đây</p>
             <p className="or-text">hoặc</p>
             <input
               type="file"
@@ -183,7 +258,7 @@ function App() {
 
           {originalImage && (
             <button onClick={handleReset} className="btn btn-secondary" style={{marginTop: '1rem'}}>
-              <i className="fas fa-redo"></i> Chọn ảnh khác
+              🔄 Chọn ảnh khác
             </button>
           )}
         </section>
@@ -191,90 +266,140 @@ function App() {
         {/* Settings Section */}
         {originalImage && (
           <section className="settings-section">
-            <h2><i className="fas fa-cog"></i> Bước 2: Cấu hình xử lý</h2>
+            <h2>⚙️ Bước 2: Cấu hình xử lý</h2>
             
             <div className="setting-group">
-              <label>Kiểu xử lý:</label>
+              <label>Chế độ xử lý:</label>
               <select value={mode} onChange={e => setMode(e.target.value)}>
-                <option value="preprocess">Xám + Mịn</option>
-                <option value="sketch">Sketch (Tranh vẽ tay)</option>
+                <option value="full">⭐ Pipeline đầy đủ (Hiến + Hùng) - KHUYÊN DÙNG</option>
+                <option value="preprocess">Grayscale + Smoothing (Hiến)</option>
+                <option value="grayscale">Chỉ Grayscale (Test)</option>
+                <option value="sketch">Edge Detection + Sketch (Hùng)</option>
               </select>
             </div>
 
-            <div className="setting-group">
-              <label>Phương pháp làm mịn:</label>
-              <select value={method} onChange={(e) => setMethod(e.target.value)} className="select">
-                <option value="bilateral">Bilateral Filter (Khuyên dùng - giữ biên)</option>
-                <option value="gaussian">Gaussian Blur (Làm mịn đều)</option>
-                <option value="median">Median Blur (Loại nhiễu)</option>
-              </select>
-            </div>
-
-            <div className="setting-group">
-              <label>Cường độ làm mịn:</label>
-              <select value={intensity} onChange={(e) => setIntensity(e.target.value)} className="select">
-                <option value="light">Nhẹ (Light)</option>
-                <option value="medium">Vừa (Medium)</option>
-                <option value="strong">Mạnh (Strong)</option>
-              </select>
-            </div>
-
-            {mode === 'sketch' && (
+            {(mode === 'preprocess' || mode === 'full') && (
               <>
                 <div className="setting-group">
-                  <label>Phương pháp phát hiện biên:</label>
-                  <select value={edgeMethod} onChange={e => setEdgeMethod(e.target.value)} className="select">
-                    <option value="canny">Canny (Khuyên dùng)</option>
-                    <option value="sobel">Sobel</option>
-                    <option value="laplacian">Laplacian</option>
-                    <option value="log">LoG (Laplacian of Gaussian)</option>
+                  <label>Phương pháp làm mịn (Hiến):</label>
+                  <select value={method} onChange={(e) => setMethod(e.target.value)}>
+                    <option value="bilateral">⭐ Bilateral Filter (Giữ biên - Khuyên dùng)</option>
+                    <option value="gaussian">Gaussian Blur (Làm mịn đều)</option>
+                    <option value="median">Median Blur (Loại nhiễu)</option>
                   </select>
                 </div>
 
                 <div className="setting-group">
-                  <label>Mức độ chi tiết:</label>
-                  <select value={detailLevel} onChange={e => setDetailLevel(e.target.value)} className="select">
-                    <option value="light">Nhẹ (Light) - Nét ít</option>
-                    <option value="medium">Vừa (Medium) - Cân bằng</option>
-                    <option value="enhanced">Nâng cao (Enhanced) - Nét nhiều</option>
-                    <option value="maximum">Cực đại (Maximum) - Nét chi tiết tối đa</option>
+                  <label>Cường độ làm mịn (Hiến):</label>
+                  <select value={intensity} onChange={(e) => setIntensity(e.target.value)}>
+                    <option value="light">Nhẹ (Light) ⭐ - Giữ chi tiết</option>
+                    <option value="medium">Vừa (Medium)</option>
+                    <option value="strong">Mạnh (Strong)</option>
                   </select>
                 </div>
               </>
             )}
 
-            <button
-              onClick={mode === 'sketch' ? handleSketchImage : handleProcessImage}
-              disabled={loading || !serverOnline}
-              className="btn btn-primary"
-            >
-              {loading ? <><i className="fas fa-spinner fa-spin"></i> Đang xử lý...</> :
-                mode === 'sketch'
-                  ? <><i className="fas fa-pencil-alt"></i> Tạo Sketch</>
-                  : <><i className="fas fa-play-circle"></i> Xử lý ảnh</>
-              }
-            </button>
+            {mode === 'preprocess' && (
+              <button
+                onClick={handlePreprocess}
+                disabled={loading || !serverOnline}
+                className="btn btn-primary"
+              >
+                {loading ? <>⏳ Đang xử lý...</> : <>🚀 Xử lý ảnh (Grayscale + Smoothing)</>}
+              </button>
+            )}
+
+            {mode === 'grayscale' && (
+              <button
+                onClick={handleGrayscale}
+                disabled={loading || !serverOnline}
+                className="btn btn-primary"
+              >
+                {loading ? <>⏳ Đang xử lý...</> : <>🖼️ Chỉ chuyển Grayscale</>}
+              </button>
+            )}
+
+            {(mode === 'sketch' || mode === 'full') && (
+              <>
+                <div className="setting-group">
+                  <label>Phương pháp phát hiện biên (Hùng):</label>
+                  <select value={edgeMethod} onChange={e => setEdgeMethod(e.target.value)}>
+                    <option value="canny">⭐ Canny (Khuyên dùng - Tối ưu nhất)</option>
+                    <option value="sobel">Sobel (Gradient - Nhanh)</option>
+                    <option value="laplacian">Laplacian (Đạo hàm bậc 2)</option>
+                    <option value="log">LoG (Laplacian of Gaussian)</option>
+                  </select>
+                </div>
+
+                <div className="setting-group">
+                  <label>Mức độ chi tiết Sketch (Hùng):</label>
+                  <select value={detailLevel} onChange={e => setDetailLevel(e.target.value)}>
+                    <option value="pencil">⭐ Tranh vẽ chì (Pencil) - TỐT NHẤT</option>
+                    <option value="natural">Tự nhiên (Natural) - Có shading</option>
+                    <option value="medium">Vừa (Medium) - Có shading nhẹ</option>
+                    <option value="enhanced">Nâng cao (Enhanced) - Chi tiết cao</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            {mode === 'sketch' && (
+              <button
+                onClick={handleSketch}
+                disabled={loading || !serverOnline}
+                className="btn btn-primary"
+              >
+                {loading ? <>⏳ Đang xử lý...</> : <>🎨 Tạo Sketch (Edge Detection)</>}
+              </button>
+            )}
+
+            {mode === 'full' && (
+              <button
+                onClick={handleFullPipeline}
+                disabled={loading || !serverOnline}
+                className="btn btn-primary"
+                style={{fontSize: '1.1rem', padding: '1rem 2rem'}}
+              >
+                {loading ? (
+                  <>⏳ Đang xử lý Pipeline đầy đủ...</>
+                ) : (
+                  <>🎨🚀 Pipeline đầy đủ: Hiến (Preprocessing) → Hùng (Sketch)</>
+                )}
+              </button>
+            )}
           </section>
         )}
 
         {/* Error Message */}
         {error && (
           <div className="error-message">
-            <i className="fas fa-exclamation-triangle"></i> {error}
+            ⚠️ {error}
           </div>
         )}
 
         {/* Processing Info */}
         {processingInfo && (
           <div className="info-message">
-            <i className="fas fa-check-circle"></i> {processingInfo.message}
+            ✅ {processingInfo.message}
             {processingInfo.shape && (
               <span> | Kích thước: {processingInfo.shape.join(' × ')} pixels</span>
             )}
-            {processingInfo.mode === 'sketch' && (
+            {processingInfo.method && processingInfo.method !== 'grayscale' && processingInfo.method !== 'sketch' && (
+              <span> | Method: {processingInfo.method} | Intensity: {processingInfo.intensity}</span>
+            )}
+            {processingInfo.method === 'sketch' && (
+              <span> | Edge: {processingInfo.edge_method} | Detail: {processingInfo.detail_level}</span>
+            )}
+            {processingInfo.method === 'full-pipeline' && (
               <>
-                <span> | Phát hiện biên: {processingInfo.edgeMethod}</span>
-                <span> | Chi tiết: {processingInfo.detailLevel}</span>
+                <span> | Smoothing: {processingInfo.smoothing_method} ({processingInfo.intensity})</span>
+                <span> | Edge: {processingInfo.edge_method} | Detail: {processingInfo.detail_level}</span>
+                {processingInfo.pipeline && (
+                  <div style={{marginTop: '0.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)'}}>
+                    📋 Pipeline: {processingInfo.pipeline.preprocessing.grayscale} → {processingInfo.pipeline.preprocessing.smoothing} → {processingInfo.pipeline.sketch.edge_detection} → {processingInfo.pipeline.sketch.sketch_effect}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -283,7 +408,7 @@ function App() {
         {/* Images Display */}
         {originalImage && (
           <section className="images-section">
-            <h2><i className="fas fa-images"></i> Bước 3: So sánh kết quả</h2>
+            <h2>📊 Bước 3: So sánh kết quả</h2>
             <div className="images-container">
               <div className="image-box">
                 <h3>Ảnh gốc</h3>
@@ -291,19 +416,25 @@ function App() {
               </div>
               <div className="image-box">
                 <h3>
-                  {mode === 'sketch' ? 'Ảnh Sketch (Tranh vẽ tay)' : 'Ảnh đã xử lý (Xám + Mịn)'}
+                  {mode === 'grayscale' 
+                    ? 'Ảnh Grayscale'
+                    : mode === 'sketch'
+                    ? 'Ảnh Sketch (Edge Detection)'
+                    : mode === 'full'
+                    ? 'Ảnh Sketch cuối cùng (Pipeline đầy đủ)'
+                    : 'Ảnh đã xử lý (Grayscale + Smoothing)'}
                 </h3>
                 {processedImage ? (
                   <>
                     <img src={processedImage} alt="Processed" className="image" />
                     <button onClick={handleDownload} className="btn btn-success">
-                      <i className="fas fa-download"></i> Tải ảnh về
+                      💾 Tải ảnh về
                     </button>
                   </>
                 ) : (
                   <div className="placeholder">
                     <p>Chưa có ảnh xử lý</p>
-                    <p><i className="fas fa-arrow-up"></i> Nhấn "Xử lý ảnh" ở trên</p>
+                    <p>⬆️ Nhấn nút xử lý ở trên</p>
                   </div>
                 )}
               </div>
@@ -314,33 +445,39 @@ function App() {
         {/* Instructions */}
         {!originalImage && (
           <section className="instructions">
-            <h2><i className="fas fa-book"></i> Hướng dẫn sử dụng</h2>
+            <h2>📖 Hướng dẫn sử dụng</h2>
             <ol>
-              <li>Đảm bảo backend server đang chạy: <code>python app.py</code></li>
+              <li>Đảm bảo backend server đang chạy: <code>cd backend && python app.py</code></li>
               <li>Tải ảnh lên (ảnh y tế, ảnh tự nhiên, ảnh công nghiệp...)</li>
-              <li>Chọn kiểu xử lý, phương pháp làm mịn và cường độ</li>
-              <li>Nếu muốn chuyển sang sketch, chọn phương pháp phát hiện biên và mức độ chi tiết</li>
-              <li>Nhấn "Xử lý ảnh" hoặc "Tạo Sketch" để xem kết quả</li>
-              <li>So sánh ảnh gốc và ảnh đã xử lý/sketch</li>
+              <li>Chọn phương pháp làm mịn và cường độ</li>
+              <li>Nhấn "Xử lý ảnh" để xem kết quả</li>
+              <li>So sánh ảnh gốc và ảnh đã xử lý</li>
               <li>Tải ảnh kết quả về máy</li>
             </ol>
             <div className="tech-info">
-              <h3><i className="fas fa-microscope"></i> Kỹ thuật sử dụng:</h3>
+              <h3>🔬 Kỹ thuật sử dụng (Hiến - Preprocessing):</h3>
               <ul>
-                <li><strong>Grayscale Conversion</strong>: Chuyển ảnh màu sang xám</li>
-                <li><strong>Bilateral Filter</strong>: Làm mịn nhưng giữ biên (edge-preserving)</li>
-                <li><strong>Gaussian Blur</strong>: Làm mịn đều toàn bộ</li>
+                <li><strong>Grayscale Conversion</strong>: Chuyển ảnh màu sang xám (0.299*R + 0.587*G + 0.114*B)</li>
+                <li><strong>Bilateral Filter</strong>: Làm mịn nhưng giữ biên (edge-preserving) ⭐</li>
+                <li><strong>Gaussian Blur</strong>: Làm mịn đều toàn bộ ảnh</li>
                 <li><strong>Median Blur</strong>: Loại bỏ nhiễu muối tiêu</li>
-                <li><strong>Edge Detection</strong>: Phát hiện biên (Canny, Sobel, Laplacian, LoG) cho sketch</li>
-                <li><strong>CLAHE</strong>: Tăng tương phản thích ứng để tăng nét chi tiết</li>
               </ul>
+              <h3 style={{marginTop: '1.5rem', color: 'rgba(255,255,255,0.9)'}}>🔬 Kỹ thuật của Hùng (Edge Detection + Sketch):</h3>
+              <ul>
+                <li><strong>Canny Edge Detection</strong>: Phát hiện biên tối ưu (Gaussian + Gradient + Non-max suppression + Hysteresis) ⭐</li>
+                <li><strong>Sobel Operator</strong>: Gradient bậc 1 (nhanh, đơn giản)</li>
+                <li><strong>Laplacian</strong>: Đạo hàm bậc 2 (phát hiện biên mảnh)</li>
+                <li><strong>LoG</strong>: Laplacian of Gaussian (cân bằng tốt)</li>
+                <li><strong>Otsu Thresholding</strong>: Tự động tính ngưỡng tối ưu</li>
+              </ul>
+              <p><strong>Lưu ý:</strong> Tất cả code được implement thủ công, không dùng OpenCV!</p>
             </div>
           </section>
         )}
       </main>
 
       <footer className="footer">
-        <p>Chuyển ảnh thành tranh vẽ </p>
+        <p>Drawify - Preprocessing Module (Hiến) | Code thủ công - Không dùng OpenCV</p>
       </footer>
     </div>
   )

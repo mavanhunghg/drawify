@@ -1,12 +1,11 @@
 """
-Flask API cho dự án Drawify - Chuyển ảnh thành tranh vẽ
-Người 1 (Hiến): API /preprocess - Grayscale + Smoothing
-Người 2 (Hùng): API /sketch - Edge Detection + Sketch Effect (CHI TIẾT CAO)
+Flask API cho dự án Drawify - Preprocessing Module
+Người thực hiện: Hiến
+Chức năng: Grayscale + Smoothing (Bilateral, Gaussian, Median)
 """
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-import cv2
 import numpy as np
 from PIL import Image
 import io
@@ -14,16 +13,12 @@ import base64
 import os
 import sys
 
-# Import các module xử lý ảnh
+# Import các module xử lý ảnh của Hiến
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
-import image_processing.grayscale as grayscale_module
-import image_processing.smoothing as smoothing_module
-from image_processing.sketch_effect import sketch_effect, sketch_effect_enhanced, sketch_effect_maximum_detail
-
-convert_to_grayscale = grayscale_module.convert_to_grayscale
-preprocess_for_sketch = smoothing_module.preprocess_for_sketch
+from image_processing.grayscale import convert_to_grayscale
+from image_processing.smoothing import preprocess_for_sketch
 
 # Khởi tạo Flask app
 app = Flask(__name__)
@@ -35,39 +30,24 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max 16MB
 def decode_image_from_request(request_data):
     """
     Giải mã ảnh từ request (base64 hoặc file upload)
-    Hỗ trợ: JPG, PNG, WEBP, AVIF và tất cả format Pillow hỗ trợ
     
     Returns:
-        numpy.ndarray: Ảnh đã decode (BGR format cho OpenCV)
+        numpy.ndarray: Ảnh đã decode (RGB format)
     """
     # Case 1: Base64 string
     if 'image' in request_data:
         try:
-            # Loại bỏ prefix data:image/...;base64, nếu có
             image_data = request_data['image']
             if ',' in image_data:
                 image_data = image_data.split(',')[1]
             
-            # Decode base64
             image_bytes = base64.b64decode(image_data)
+            pil_image = Image.open(io.BytesIO(image_bytes))
             
-            # Thử decode bằng Pillow trước (hỗ trợ AVIF, WEBP...)
-            try:
-                import pillow_avif  # Import để enable AVIF support
-                pil_image = Image.open(io.BytesIO(image_bytes))
-                # Convert sang RGB nếu cần
-                if pil_image.mode != 'RGB':
-                    pil_image = pil_image.convert('RGB')
-                # Convert PIL → numpy → BGR (OpenCV format)
-                image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-                return image
-            except:
-                # Fallback: Dùng cv2.imdecode cho JPG/PNG thông thường
-                image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-                image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-                if image is None:
-                    raise ValueError("Không thể decode ảnh")
-                return image
+            if pil_image.mode != 'RGB':
+                pil_image = pil_image.convert('RGB')
+            
+            return np.array(pil_image)
         except Exception as e:
             raise ValueError(f"Lỗi decode base64: {str(e)}")
     
@@ -78,26 +58,13 @@ def decode_image_from_request(request_data):
             raise ValueError("Không có file được chọn")
         
         try:
-            # Đọc file thành bytes
             file_bytes = file.read()
+            pil_image = Image.open(io.BytesIO(file_bytes))
             
-            # Thử decode bằng Pillow trước (hỗ trợ AVIF, WEBP...)
-            try:
-                import pillow_avif  # Import để enable AVIF support
-                pil_image = Image.open(io.BytesIO(file_bytes))
-                # Convert sang RGB nếu cần
-                if pil_image.mode != 'RGB':
-                    pil_image = pil_image.convert('RGB')
-                # Convert PIL → numpy → BGR (OpenCV format)
-                image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-                return image
-            except:
-                # Fallback: Dùng cv2.imdecode cho JPG/PNG thông thường
-                image_array = np.frombuffer(file_bytes, dtype=np.uint8)
-                image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-                if image is None:
-                    raise ValueError("Không thể decode ảnh")
-                return image
+            if pil_image.mode != 'RGB':
+                pil_image = pil_image.convert('RGB')
+            
+            return np.array(pil_image)
         except Exception as e:
             raise ValueError(f"Lỗi đọc file: {str(e)}")
     
@@ -113,17 +80,23 @@ def encode_image_to_base64(image):
     Returns:
         str: Base64 string
     """
-    # Encode ảnh thành PNG
-    success, buffer = cv2.imencode('.png', image)
-    if not success:
-        raise ValueError("Lỗi encode ảnh")
+    # Convert numpy array sang PIL Image
+    if len(image.shape) == 2:  # Grayscale
+        pil_image = Image.fromarray(image.astype(np.uint8), mode='L')
+    else:  # RGB
+        pil_image = Image.fromarray(image.astype(np.uint8), mode='RGB')
     
-    # Chuyển sang base64
-    image_base64 = base64.b64encode(buffer).decode('utf-8')
+    # Encode thành PNG
+    buffer = io.BytesIO()
+    pil_image.save(buffer, format='PNG')
+    buffer.seek(0)
+    
+    # Convert sang base64
+    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
     return f"data:image/png;base64,{image_base64}"
 
 # ============================================
-# API CỦA NGƯỜI 1 (HIẾN) - PREPROCESSING
+# API PREPROCESSING (HIẾN)
 # ============================================
 
 @app.route('/api/preprocess', methods=['POST'])
@@ -182,7 +155,6 @@ def preprocess_image():
 def grayscale_only():
     """
     API chỉ chuyển ảnh sang xám (không smoothing)
-    Để test riêng grayscale
     """
     try:
         if request.is_json:
@@ -208,69 +180,6 @@ def grayscale_only():
         }), 400
 
 # ============================================
-# API CỦA NGƯỜI 2 (HÙNG) - SKETCH (CHI TIẾT CAO)
-# ============================================
-
-@app.route('/api/sketch', methods=['POST'])
-def sketch_image():
-    """
-    API tạo sketch - Chi tiết cao với nhiều tùy chọn nét
-    
-    Input:
-        - image: base64 string hoặc file upload
-        - smoothing_method: 'bilateral' (khuyên dùng), 'gaussian', 'median'
-        - intensity: 'light', 'medium', 'strong'
-        - edge_method: 'canny', 'sobel', 'laplacian', 'log'
-        - detail_level: 'light', 'medium', 'enhanced', 'maximum'
-    
-    Output:
-        - success: True/False
-        - image: base64 string (ảnh sketch nét)
-        - message: thông báo
-        - detail_level: mức độ chi tiết đã dùng
-    """
-    try:
-        if request.is_json:
-            data = request.get_json()
-        else:
-            data = request.form.to_dict()
-        
-        image = decode_image_from_request({**data, **request.files})
-        
-        # Lấy tham số
-        smoothing_method = data.get('smoothing_method', 'bilateral')
-        intensity = data.get('intensity', 'medium')
-        edge_method = data.get('edge_method', 'canny')
-        detail_level = data.get('detail_level', 'medium')  # light, medium, enhanced, maximum
-        
-        # Chọn hàm phù hợp theo mức độ chi tiết
-        if detail_level == 'maximum':
-            sketch = sketch_effect_maximum_detail(image, smoothing_method, intensity)
-            detail_msg = 'Chi tiết cực đại'
-        elif detail_level == 'enhanced':
-            sketch = sketch_effect_enhanced(image, smoothing_method, intensity, edge_method, 'strong')
-            detail_msg = 'Chi tiết nâng cao'
-        else:  # medium (mặc định)
-            sketch = sketch_effect(image, smoothing_method, intensity, edge_method)
-            detail_msg = 'Chi tiết vừa'
-        
-        result_base64 = encode_image_to_base64(sketch)
-        
-        return jsonify({
-            'success': True,
-            'image': result_base64,
-            'message': f'Tạo sketch thành công! ({detail_msg})',
-            'shape': list(sketch.shape),
-            'detail_level': detail_level
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Lỗi xử lý sketch: {str(e)}'
-        }), 400
-
-# ============================================
 # HEALTH CHECK & INFO
 # ============================================
 
@@ -280,16 +189,18 @@ def home():
     Trang chủ API
     """
     return jsonify({
-        'project': 'Drawify - Image to Sketch',
-        'version': '2.0 (Chi tiết cao)',
+        'project': 'Drawify - Image Preprocessing',
+        'version': '1.0',
+        'author': 'Hiến',
+        'features': [
+            'Grayscale Conversion',
+            'Bilateral Filter (Edge-Preserving)',
+            'Gaussian Blur',
+            'Median Blur'
+        ],
         'endpoints': {
-            'preprocessing': {
-                '/api/preprocess': 'Grayscale + Smoothing (Người 1 - Hiến)',
-                '/api/grayscale': 'Chỉ chuyển xám (test)',
-            },
-            'sketch': {
-                '/api/sketch': 'Edge Detection + Sketch chi tiết cao (Người 2 - Hùng)'
-            }
+            '/api/preprocess': 'Grayscale + Smoothing',
+            '/api/grayscale': 'Grayscale only (test)',
         },
         'status': 'running'
     })
@@ -306,10 +217,10 @@ def health_check():
 # ============================================
 
 if __name__ == '__main__':
-    print("🚀 Starting Drawify API Server...")
-    print("📍 Người 1 (Hiến) - Preprocessing API: /api/preprocess")
-    print("📍 Test grayscale: /api/grayscale")
-    print("📍 Người 2 (Hùng) - Sketch API: /api/sketch (CHI TIẾT CAO)")
+    print("🚀 Starting Drawify Preprocessing API...")
+    print("👤 Module: Hiến - Grayscale + Smoothing")
+    print("📍 API /api/preprocess - Tiền xử lý ảnh")
+    print("📍 API /api/grayscale - Chuyển xám (test)")
     print("\n✅ Server sẵn sàng tại: http://localhost:5000")
     
     app.run(debug=True, host='0.0.0.0', port=5000)

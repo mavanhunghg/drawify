@@ -51,6 +51,63 @@ export const preprocessImage = async (imageBase64, method = 'bilateral', intensi
 };
 
 /**
+ * API Pipeline đầy đủ - Kết hợp cả Hiến và Hùng
+ */
+export const fullPipeline = async (
+  imageBase64,
+  smoothingMethod = 'bilateral',
+  intensity = 'light',
+  edgeMethod = 'canny',
+  detailLevel = 'pencil',
+  threshold1 = null,
+  threshold2 = null,
+  shadingIntensity = 0.5,
+  edgeStrength = 0.4
+) => {
+  try {
+    const body = {
+      image: imageBase64,
+      smoothing_method: smoothingMethod,
+      intensity: intensity,
+      edge_method: edgeMethod,
+      detail_level: detailLevel,
+      shading_intensity: shadingIntensity,
+      edge_strength: edgeStrength,
+    };
+    
+    if (threshold1 !== null && threshold1 !== undefined) {
+      body.threshold1 = threshold1;
+    }
+    if (threshold2 !== null && threshold2 !== undefined) {
+      body.threshold2 = threshold2;
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/full-pipeline`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'Xử lý pipeline thất bại');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in full pipeline:', error);
+    throw error;
+  }
+};
+
+/**
  * API chuyển ảnh thành sketch/tranh vẽ tay (Người 2 - Hùng) - CHI TIẾT CAO
  */
 export const sketchImage = async (
@@ -58,21 +115,41 @@ export const sketchImage = async (
   smoothingMethod = 'bilateral',
   intensity = 'medium',
   edgeMethod = 'canny',
-  detailLevel = 'medium'
+  detailLevel = 'medium',
+  colored = false,  // Mặc định dùng tranh đen trắng
+  colorPreservation = 0.7,
+  threshold1 = null,
+  threshold2 = null,
+  shadingIntensity = 0.3,
+  edgeStrength = 0.3
 ) => {
   try {
+    const body = {
+      image: imageBase64,
+      smoothing_method: smoothingMethod,
+      intensity: intensity,
+      edge_method: edgeMethod,
+      detail_level: detailLevel,
+      colored: colored,
+      color_preservation: colorPreservation,
+      shading_intensity: shadingIntensity,
+      edge_strength: edgeStrength,
+    };
+    
+    // Chỉ thêm threshold nếu được chỉ định
+    if (threshold1 !== null && threshold1 !== undefined) {
+      body.threshold1 = threshold1;
+    }
+    if (threshold2 !== null && threshold2 !== undefined) {
+      body.threshold2 = threshold2;
+    }
+    
     const response = await fetch(`${API_BASE_URL}/sketch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        image: imageBase64,
-        smoothing_method: smoothingMethod,
-        intensity: intensity,
-        edge_method: edgeMethod,
-        detail_level: detailLevel,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -88,6 +165,46 @@ export const sketchImage = async (
     return data;
   } catch (error) {
     console.error('Error creating sketch:', error);
+    throw error;
+  }
+};
+
+/**
+ * API tạo hiệu ứng tranh vẽ có màu (Painting Effect)
+ */
+export const paintingImage = async (
+  imageBase64,
+  style = 'watercolor',
+  intensity = 'medium',
+  advanced = false
+) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/painting`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image: imageBase64,
+        style: style,
+        intensity: intensity,
+        advanced: advanced,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'Xử lý tranh vẽ thất bại');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error creating painting:', error);
     throw error;
   }
 };
