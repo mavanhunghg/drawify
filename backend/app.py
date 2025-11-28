@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 from PIL import Image
+import pillow_avif
 import io
 import base64
 import os
@@ -21,7 +22,7 @@ from image_processing.smoothing import preprocess_for_sketch
 
 app = Flask(__name__)
 CORS(app)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 def decode_image_from_request(request_data):
     """Giải mã ảnh từ request (base64 hoặc file upload)"""
@@ -101,6 +102,9 @@ def preprocess_image():
         })
     
     except Exception as e:
+        print(f"❌ Error in /api/preprocess: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'message': f'Lỗi xử lý: {str(e)}'
