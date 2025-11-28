@@ -136,9 +136,9 @@ function App() {
         <h1>🎨 Drawify</h1>
         <div className={`server-status ${serverOnline ? 'online' : 'offline'}`}>
           {serverOnline ? (
-            <>✅ Server đang chạy</>
+            <> Server đang chạy</>
           ) : (
-            <>❌ Server offline - Chạy: cd backend && python app.py</>
+            <> Server offline - Chạy: cd backend && python app.py</>
           )}
         </div>
       </header>
@@ -173,7 +173,7 @@ function App() {
         {/* Settings Section */}
         {originalImage && (
           <section className="settings-section">
-            <h2>⚙️ Bước 2: Cấu hình xử lý</h2>
+            <h2> Bước 2: Cấu hình xử lý</h2>
 
             <div className="setting-group">
               <label>Phương pháp làm mịn </label>
@@ -214,7 +214,7 @@ function App() {
                   <span>100 (Ít nhạy - Ít nét, đơn giản)</span>
                 </div>
                 <div style={{fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem', fontStyle: 'italic'}}>
-                  💡 High threshold tự động = 3 × Low ({cannyThreshold} → {cannyThreshold * 3})
+                High threshold tự động = 3 × Low ({cannyThreshold} → {cannyThreshold * 3})
                 </div>
               </div>
             )}
@@ -238,14 +238,14 @@ function App() {
         {/* Error Message */}
         {error && (
           <div className="error-message">
-            ⚠️ {error}
+             {error}
           </div>
         )}
 
         {/* Processing Info */}
         {processingInfo && (
           <div className="info-message">
-            ✅ {processingInfo.message}
+             {processingInfo.message}
             {processingInfo.shape && (
               <span> | Kích thước: {processingInfo.shape.join(' × ')} pixels</span>
             )}
@@ -261,7 +261,7 @@ function App() {
                 <span> | Edge: {processingInfo.edge_method} | Detail: {processingInfo.detail_level}</span>
                 {processingInfo.pipeline && (
                   <div style={{marginTop: '0.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)'}}>
-                    📋 Pipeline: {processingInfo.pipeline.preprocessing.grayscale} → {processingInfo.pipeline.preprocessing.smoothing} → {processingInfo.pipeline.sketch.edge_detection} → {processingInfo.pipeline.sketch.sketch_effect}
+                     Pipeline: {processingInfo.pipeline.preprocessing.grayscale} → {processingInfo.pipeline.preprocessing.smoothing} → {processingInfo.pipeline.sketch.edge_detection} → {processingInfo.pipeline.sketch.sketch_effect}
                   </div>
                 )}
               </>
