@@ -1,0 +1,416 @@
+[1mdiff --git a/backend/app.py b/backend/app.py[m
+[1mindex ee37ad0..86d42c5 100644[m
+[1m--- a/backend/app.py[m
+[1m+++ b/backend/app.py[m
+[36m@@ -1,7 +1,4 @@[m
+[31m-"""[m
+[31m-Flask API cho dự án Drawify - Full Pipeline[m
+[31m-Chức năng: Grayscale + Smoothing + Edge Detection + Sketch Effect[m
+[31m-"""[m
+[32m+[m[32m"""Flask API cho dự án Drawify - Photo to Sketch"""[m
+ [m
+ from flask import Flask, request, jsonify[m
+ from flask_cors import CORS[m
+[36m@@ -18,16 +15,15 @@[m [msys.path.append(current_dir)[m
+ [m
+ from image_processing.grayscale import convert_to_grayscale[m
+ from image_processing.smoothing import preprocess_for_sketch[m
+[31m-from image_processing.edge_detect import detect_edges[m
+[31m-from image_processing.sketch_effect import create_pencil_sketch, enhance_sketch_contrast[m
+[32m+[m[32mfrom image_processing.edge_detection import detect_edges[m
+[32m+[m[32mfrom image_processing.sketch_effect import full_sketch_pipeline[m
+ [m
+ app = Flask(__name__)[m
+ CORS(app)[m
+ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024[m
+ [m
+[31m-[m
+ def decode_image_from_request(request_data):[m
+[31m-    """Giải mã ảnh từ request (base64 hoặc file upload)"""[m
+[32m+[m[32m    """Giải mã ảnh từ request"""[m
+     if 'image' in request_data:[m
+         try:[m
+             image_data = request_data['image'][m
+[36m@@ -62,7 +58,6 @@[m [mdef decode_image_from_request(request_data):[m
+     [m
+     raise ValueError("Không tìm thấy ảnh trong request")[m
+ [m
+[31m-[m
+ def encode_image_to_base64(image):[m
+     """Encode ảnh numpy array sang base64 string"""[m
+     if len(image.shape) == 2:[m
+[36m@@ -76,80 +71,9 @@[m [mdef encode_image_to_base64(image):[m
+     image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')[m
+     return f"data:image/png;base64,{image_base64}"[m
+ [m
+[31m-[m
+[31m-@app.route('/api/sketch', methods=['POST'])[m
+[31m-def create_sketch():[m
+[31m-    """[m
+[31m-    API chính: Tạo ảnh vẽ từ ảnh gốc[m
+[31m-    Pipeline: Grayscale → Smoothing → Edge Detection → Sketch Effect[m
+[31m-    """[m
+[31m-    try:[m
+[31m-        if request.is_json:[m
+[31m-            data = request.get_json()[m
+[31m-        else:[m
+[31m-            data = request.form.to_dict()[m
+[31m-        [m
+[31m-        # Decode ảnh[m
+[31m-        image = decode_image_from_request({**data, **request.files})[m
+[31m-        [m
+[31m-        # Lấy parameters từ request[m
+[31m-        smoothing_method = data.get('smoothing_method', 'bilateral')[m
+[31m-        intensity = data.get('intensity', 'medium')[m
+[31m-        edge_method = data.get('edge_method', 'canny')[m
+[31m-        threshold = int(data.get('threshold', 50))[m
+[31m-        detail_level = data.get('detail_level', 'pencil')[m
+[31m-        [m
+[31m-        # PIPELINE BẮT ĐẦU[m
+[31m-        # Bước 1: Grayscale[m
+[31m-        gray_image = convert_to_grayscale(image)[m
+[31m-        [m
+[31m-        # Bước 2: Smoothing (preprocessing)[m
+[31m-        smoothed_image = preprocess_for_sketch([m
+[31m-            gray_image, [m
+[31m-            method=smoothing_method, [m
+[31m-            intensity=intensity, [m
+[31m-            use_opencv=True[m
+[31m-        )[m
+[31m-        [m
+[31m-        # Bước 3: Edge Detection[m
+[31m-        edges = detect_edges(smoothed_image, method=edge_method, threshold=threshold)[m
+[31m-        [m
+[31m-        # Bước 4: Sketch Effect[m
+[31m-        sketch = create_pencil_sketch(smoothed_image, edges, detail_level=detail_level)[m
+[31m-        [m
+[31m-        # Bước 5: Enhance contrast (optional)[m
+[31m-        sketch = enhance_sketch_contrast(sketch, clip_limit=2.0)[m
+[31m-        [m
+[31m-        # Encode kết quả[m
+[31m-        result_base64 = encode_image_to_base64(sketch)[m
+[31m-        [m
+[31m-        return jsonify({[m
+[31m-            'success': True,[m
+[31m-            'image': result_base64,[m
+[31m-            'message': f'Tạo sketch thành công với {edge_method} edge detection',[m
+[31m-            'shape': list(sketch.shape),[m
+[31m-            'pipeline': {[m
+[31m-                'smoothing': smoothing_method,[m
+[31m-                'intensity': intensity,[m
+[31m-                'edge_method': edge_method,[m
+[31m-                'threshold': threshold,[m
+[31m-                'detail_level': detail_level[m
+[31m-            }[m
+[31m-        })[m
+[31m-    [m
+[31m-    except Exception as e:[m
+[31m-        print(f"❌ Error in /api/sketch: {str(e)}")[m
+[31m-        import traceback[m
+[31m-        traceback.print_exc()[m
+[31m-        return jsonify({[m
+[31m-            'success': False,[m
+[31m-            'message': f'Lỗi xử lý: {str(e)}'[m
+[31m-        }), 400[m
+[31m-[m
+[31m-[m
+ @app.route('/api/preprocess', methods=['POST'])[m
+ def preprocess_image():[m
+[31m-    """API xử lý tiền xử lý ảnh: Grayscale + Smoothing (backward compatibility)"""[m
+[32m+[m[32m    """API preprocessing: Grayscale + Smoothing"""[m
+     try:[m
+         if request.is_json:[m
+             data = request.get_json()[m
+[36m@@ -157,12 +81,11 @@[m [mdef preprocess_image():[m
+             data = request.form.to_dict()[m
+         [m
+         image = decode_image_from_request({**data, **request.files})[m
+[31m-        method = data.get('method', 'bilateral')[m
+[31m-        intensity = data.get('intensity', 'medium')[m
+[31m-        use_opencv = data.get('use_opencv', True)[m
+[32m+[m[32m        method = request.form.get('method', 'bilateral') if not request.is_json else data.get('method', 'bilateral')[m
+[32m+[m[32m        intensity = request.form.get('intensity', 'medium') if not request.is_json else data.get('intensity', 'medium')[m
+         [m
+         gray_image = convert_to_grayscale(image)[m
+[31m-        smooth_image = preprocess_for_sketch(gray_image, method=method, intensity=intensity, use_opencv=use_opencv)[m
+[32m+[m[32m        smooth_image = preprocess_for_sketch(gray_image, method=method, intensity=intensity)[m
+         result_base64 = encode_image_to_base64(smooth_image)[m
+         [m
+         return jsonify({[m
+[36m@@ -175,7 +98,7 @@[m [mdef preprocess_image():[m
+         })[m
+     [m
+     except Exception as e:[m
+[31m-        print(f"❌ Error in /api/preprocess: {str(e)}")[m
+[32m+[m[32m        print(f"Error in /api/preprocess: {str(e)}")[m
+         import traceback[m
+         traceback.print_exc()[m
+         return jsonify({[m
+[36m@@ -183,7 +106,6 @@[m [mdef preprocess_image():[m
+             'message': f'Lỗi xử lý: {str(e)}'[m
+         }), 400[m
+ [m
+[31m-[m
+ @app.route('/api/grayscale', methods=['POST'])[m
+ def grayscale_only():[m
+     """API chỉ chuyển ảnh sang xám"""[m
+[36m@@ -210,41 +132,135 @@[m [mdef grayscale_only():[m
+             'message': f'Lỗi: {str(e)}'[m
+         }), 400[m
+ [m
+[31m-[m
+ @app.route('/')[m
+ def home():[m
+     """Trang chủ API"""[m
+     return jsonify({[m
+[31m-        'project': 'Drawify - Image to Sketch Converter',[m
+[32m+[m[32m        'project': 'Drawify - Photo to Sketch',[m
+         'version': '2.0',[m
+         'features': [[m
+             'Grayscale Conversion',[m
+[31m-            'Smoothing (Bilateral, Gaussian, Median)',[m
+[31m-            'Edge Detection (Canny, Sobel, Laplacian, LoG)',[m
+[31m-            'Sketch Effect (Pencil, Natural, Enhanced)'[m
+[32m+[m[32m            'Image Smoothing (Bilateral, Gaussian, Median)',[m
+[32m+[m[32m            'Edge Detection (Canny, Sobel, Laplacian)',[m
+[32m+[m[32m            'Sketch Effect (Pencil, Enhanced)'[m
+         ],[m
+         'endpoints': {[m
+[31m-            '/api/sketch': 'Full pipeline - Tạo ảnh vẽ (MAIN ENDPOINT)',[m
+[31m-            '/api/preprocess': 'Grayscale + Smoothing only',[m
+[31m-            '/api/grayscale': 'Grayscale only (test)',[m
+[32m+[m[32m            '/api/preprocess': 'Grayscale + Smoothing',[m
+[32m+[m[32m            '/api/grayscale': 'Grayscale only',[m
+[32m+[m[32m            '/api/sketch': 'Edge Detection + Sketch',[m
+[32m+[m[32m            '/api/full-pipeline': 'Full Pipeline'[m
+         },[m
+         'status': 'running'[m
+     })[m
+ [m
+[32m+[m[32m@app.route('/api/sketch', methods=['POST'])[m
+[32m+[m[32mdef create_sketch():[m
+[32m+[m[32m    """API tạo sketch effect"""[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        if request.is_json:[m
+[32m+[m[32m            data = request.get_json()[m
+[32m+[m[32m        else:[m
+[32m+[m[32m            data = request.form.to_dict()[m
+[32m+[m[41m        [m
+[32m+[m[32m        image = decode_image_from_request({**data, **request.files})[m
+[32m+[m[41m        [m
+[32m+[m[32m        smoothing_method = request.form.get('smoothing_method', 'bilateral') if not request.is_json else data.get('smoothing_method', 'bilateral')[m
+[32m+[m[32m        intensity = request.form.get('intensity', 'medium') if not request.is_json else data.get('intensity', 'medium')[m
+[32m+[m[32m        edge_method = request.form.get('edge_method', 'canny') if not request.is_json else data.get('edge_method', 'canny')[m
+[32m+[m[32m        detail_level = request.form.get('detail_level', 'pencil') if not request.is_json else data.get('detail_level', 'pencil')[m
+[32m+[m[32m        low_threshold = int(request.form.get('low_threshold', '50')) if not request.is_json else data.get('low_threshold', 50)[m
+[32m+[m[32m        high_threshold = int(request.form.get('high_threshold', '150')) if not request.is_json else data.get('high_threshold', 150)[m
+[32m+[m[32m        invert = request.form.get('invert', 'false').lower() == 'true' if not request.is_json else data.get('invert', False)[m
+[32m+[m[41m        [m
+[32m+[m[32m        gray_image = convert_to_grayscale(image)[m
+[32m+[m[32m        smooth_image = preprocess_for_sketch(gray_image, method=smoothing_method, intensity=intensity)[m
+[32m+[m[32m        edges = detect_edges(smooth_image, method=edge_method, low_threshold=low_threshold, high_threshold=high_threshold)[m
+[32m+[m[32m        sketch = full_sketch_pipeline(smooth_image, edges, detail_level=detail_level, invert=invert)[m
+[32m+[m[41m        [m
+[32m+[m[32m        result_base64 = encode_image_to_base64(sketch)[m
+[32m+[m[41m        [m
+[32m+[m[32m        return jsonify({[m
+[32m+[m[32m            'success': True,[m
+[32m+[m[32m            'image': result_base64,[m
+[32m+[m[32m            'message': f'Tạo sketch thành công: {edge_method} + {detail_level}',[m
+[32m+[m[32m            'shape': list(sketch.shape),[m
+[32m+[m[32m            'pipeline': {[m
+[32m+[m[32m                'smoothing': smoothing_method,[m
+[32m+[m[32m                'edge_detection': edge_method,[m
+[32m+[m[32m                'detail_level': detail_level[m
+[32m+[m[32m            }[m
+[32m+[m[32m        })[m
+[32m+[m[41m    [m
+[32m+[m[32m    except Exception as e:[m
+[32m+[m[32m        print(f"Error in /api/sketch: {str(e)}")[m
+[32m+[m[32m        import traceback[m
+[32m+[m[32m        traceback.print_exc()[m
+[32m+[m[32m        return jsonify({[m
+[32m+[m[32m            'success': False,[m
+[32m+[m[32m            'message': f'Lỗi: {str(e)}'[m
+[32m+[m[32m        }), 400[m
+[32m+[m
+[32m+[m
+[32m+[m[32m@app.route('/api/full-pipeline', methods=['POST'])[m
+[32m+[m[32mdef full_pipeline_endpoint():[m
+[32m+[m[32m    """API pipeline đầy đủ"""[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        if request.is_json:[m
+[32m+[m[32m            data = request.get_json()[m
+[32m+[m[32m        else:[m
+[32m+[m[32m            data = request.form.to_dict()[m
+[32m+[m[41m        [m
+[32m+[m[32m        image = decode_image_from_request({**data, **request.files})[m
+[32m+[m[41m        [m
+[32m+[m[32m        smoothing_method = request.form.get('smoothing_method', 'bilateral') if not request.is_json else data.get('smoothing_method', 'bilateral')[m
+[32m+[m[32m        intensity = request.form.get('intensity', 'light') if not request.is_json else data.get('intensity', 'light')[m
+[32m+[m[32m        edge_method = request.form.get('edge_method', 'canny') if not request.is_json else data.get('edge_method', 'canny')[m
+[32m+[m[32m        detail_level = request.form.get('detail_level', 'pencil') if not request.is_json else data.get('detail_level', 'pencil')[m
+[32m+[m[32m        low_threshold = int(request.form.get('low_threshold', '50')) if not request.is_json else data.get('low_threshold', 50)[m
+[32m+[m[32m        high_threshold = int(request.form.get('high_threshold', '150')) if not request.is_json else data.get('high_threshold', 150)[m
+[32m+[m[32m        invert = request.form.get('invert', 'false').lower() == 'true' if not request.is_json else data.get('invert', False)[m
+[32m+[m[41m        [m
+[32m+[m[32m        gray_image = convert_to_grayscale(image)[m
+[32m+[m[32m        smooth_image = preprocess_for_sketch(gray_image, method=smoothing_method, intensity=intensity)[m
+[32m+[m[32m        edges = detect_edges(smooth_image, method=edge_method, low_threshold=low_threshold, high_threshold=high_threshold)[m
+[32m+[m[32m        sketch = full_sketch_pipeline(smooth_image, edges, detail_level=detail_level, invert=invert)[m
+[32m+[m[41m        [m
+[32m+[m[32m        result_base64 = encode_image_to_base64(sketch)[m
+[32m+[m[41m        [m
+[32m+[m[32m        return jsonify({[m
+[32m+[m[32m            'success': True,[m
+[32m+[m[32m            'image': result_base64,[m
+[32m+[m[32m            'message': 'Xử lý pipeline đầy đủ thành công',[m
+[32m+[m[32m            'shape': list(sketch.shape),[m
+[32m+[m[32m            'pipeline': {[m
+[32m+[m[32m                'preprocessing': {[m
+[32m+[m[32m                    'grayscale': 'weighted_average',[m
+[32m+[m[32m                    'smoothing': smoothing_method,[m
+[32m+[m[32m                    'intensity': intensity[m
+[32m+[m[32m                },[m
+[32m+[m[32m                'sketch': {[m
+[32m+[m[32m                    'edge_detection': edge_method,[m
+[32m+[m[32m                    'sketch_effect': detail_level[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m        })[m
+[32m+[m[41m    [m
+[32m+[m[32m    except Exception as e:[m
+[32m+[m[32m        print(f"Error in /api/full-pipeline: {str(e)}")[m
+[32m+[m[32m        import traceback[m
+[32m+[m[32m        traceback.print_exc()[m
+[32m+[m[32m        return jsonify({[m
+[32m+[m[32m            'success': False,[m
+[32m+[m[32m            'message': f'Lỗi: {str(e)}'[m
+[32m+[m[32m        }), 400[m
+[32m+[m
+ [m
+ @app.route('/health')[m
+ def health_check():[m
+[31m-    """Kiểm tra server hoạt động"""[m
+[31m-    return jsonify({'status': 'healthy', 'message': 'Server đang chạy tốt!'})[m
+[31m-[m
+[32m+[m[32m    """Health check"""[m
+[32m+[m[32m    return jsonify({'status': 'healthy'})[m
+ [m
+ if __name__ == '__main__':[m
+[31m-    print("🚀 Starting Drawify API Server...")[m
+[31m-    print("🎨 Full Pipeline: Grayscale → Smoothing → Edge Detection → Sketch")[m
+[31m-    print("\n📍 Endpoints:")[m
+[31m-    print("   POST /api/sketch - Tạo ảnh vẽ (MAIN)")[m
+[31m-    print("   POST /api/preprocess - Tiền xử lý")[m
+[31m-    print("   POST /api/grayscale - Chuyển xám")[m
+[31m-    print("\n✅ Server sẵn sàng tại: http://localhost:5000")[m
+[31m-    [m
+[32m+[m[32m    print("Starting Drawify API - Photo to Sketch")[m
+[32m+[m[32m    print("Server: http://localhost:5000")[m
+     app.run(debug=True, host='0.0.0.0', port=5000)[m
+[1mdiff --git a/backend/image_processing/sketch_effect.py b/backend/image_processing/sketch_effect.py[m
+[1mindex db3285c..ab4919d 100644[m
+[1m--- a/backend/image_processing/sketch_effect.py[m
+[1m+++ b/backend/image_processing/sketch_effect.py[m
+[36m@@ -1,204 +1,56 @@[m
+[31m-"""[m
+[31m-Sketch Effect Module - Tạo hiệu ứng vẽ phác thảo (Pure Python - No OpenCV)[m
+[31m-Kết hợp edge detection với các kỹ thuật xử lý ảnh[m
+[31m-"""[m
+[32m+[m[32m"""Module tạo hiệu ứng tranh vẽ (Sketch Effect)"""[m
+ [m
+ import numpy as np[m
+[31m-from scipy import ndimage[m
+[32m+[m[32mimport cv2[m
+ [m
+ [m
+[31m-def gaussian_blur_scipy(image, sigma=5.0):[m
+[31m-    """Gaussian blur dùng scipy"""[m
+[31m-    return ndimage.gaussian_filter(image, sigma=sigma)[m
+[31m-[m
+[31m-[m
+[31m-def dodge_blend(base, blend):[m
+[31m-    """[m
+[31m-    Dodge blending mode (giống Photoshop)[m
+[31m-    Công thức: base / (255 - blend) * 255[m
+[31m-    """[m
+[31m-    # Tránh chia cho 0[m
+[31m-    blend = np.clip(blend, 0, 254)[m
+[31m-    result = (base.astype(np.float32) * 255.0) / (255.0 - blend.astype(np.float32))[m
+[31m-    return np.clip(result, 0, 255).astype(np.uint8)[m
+[31m-[m
+[31m-[m
+[31m-def bilateral_filter_manual(image, d=9, sigma_color=75, sigma_space=75):[m
+[31m-    """[m
+[31m-    Bilateral filter thuần túy (edge-preserving smoothing)[m
+[31m-    [m
+[31m-    Args:[m
+[31m-        image: Ảnh grayscale[m
+[31m-        d: Đường kính vùng filter[m
+[31m-        sigma_color: Sigma cho color space[m
+[31m-        sigma_space: Sigma cho coordinate space[m
+[31m-    [m
+[31m-    Returns:[m
+[31m-        filtered: Ảnh đã filter[m
+[31m-    """[m
+[31m-    rows, cols = image.shape[m
+[31m-    filtered = np.zeros_like(image, dtype=np.float32)[m
+[31m-    [m
+[31m-    # Tạo Gaussian spatial kernel[m
+[31m-    half_d = d // 2[m
+[31m-    spatial_kernel = np.zeros((d, d))[m
+[31m-    for i in range(d):[m
+[31m-        for j in range(d):[m
+[31m-            x = i - half_d[m
+[31m-            y = j - half_d[m
+[31m-            spatial_kernel[i, j] = np.exp(-(x**2 + y**2) / (2 * sigma_space**2))[m
+[32m+[m[32mdef create_pencil_sketch(gray_image, edges):[m
+[32m+[m[32m    """Tạo hiệu ứng vẽ chì (pencil sketch)"""[m
+[32m+[m[32m    inverted = 255 - gray_image[m
+[32m+[m[32m    blurred = cv2.GaussianBlur(inverted, (21, 21), 0)[m
+     [m
+[31m-    # Padding[m
+[31m-    padded = np.pad(image, half_d, mode='edge')[m
+[32m+[m[32m    def dodge(front, back):[m
+[32m+[m[32m        result = back / (255 - front + 1e-7) * 255[m
+[32m+[m[32m        result = np.clip(result, 0, 255)[m
+[32m+[m[32m        return result.astype(np.uint8)[m
+     [m
+[31m-    # Áp dụng bilateral filter[m
+[31m-    for i in range(rows):[m
+[31m-        for j in range(cols):[m
+[31m-            # Lấy vùng lân cận[m
+[31m-            neighborhood = padded[i:i+d, j:j+d][m
+[31m-            center_val = image[i, j][m
+[31m-            [m
+[31m-            # Tính color kernel[m
+[31m-            color_kernel = np.exp(-((neighborhood - center_val)**2) / (2 * sigma_color**2))[m
+[31m-            [m
+[31m-            # Kết hợp spatial và color kernels[m
+[31m-            kernel = spatial_kernel * color_kernel[m
+[31m-            kernel_sum = np.sum(kernel)[m
+[31m-            [m
+[31m-            # Tính giá trị mới[m
+[31m-            if kernel_sum > 0:[m
+[31m-                filtered[i, j] = np.sum(neighborhood * kernel) / kernel_sum[m
+[31m-            else:[m
+[31m-                filtered[i, j] = center_val[m
+[31m-    [m
+[31m-    return filtered.astype(np.uint8)[m
+[32m+[m[32m    sketch = dodge(blurred, gray_image)[m
+[32m+[m[32m    edges_inv = 255 - edges[m
+[32m+[m[32m    sketch = cv2.multiply(sketch.astype(float) / 255,[m
+[32m+[m[32m                          edges_inv.astype(float) / 255,[m
+[32m+[m[32m                          scale=255).astype(np.uint8)[m
+[32m+[m[32m    return sketch[m
+ [m
+ [m
+[31m-def create_pencil_sketch(gray_image, edges, detail_level='pencil'):[m
+[31m-    """[m
+[31m-    Tạo hiệu ứng vẽ chì (pencil sketch) từ ảnh xám và biên[m
+[31m-    [m
+[31m-    Args:[m
+[31m-        gray_image: Ảnh grayscale[m
+[31m-        edges: Ảnh biên đã phát hiện[m
+[31m-        detail_level: Mức độ chi tiết ('pencil', 'natura
