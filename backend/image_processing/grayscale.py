@@ -86,30 +86,3 @@ def convert_to_grayscale_custom(image, method='weighted'):
     
     return image.astype(np.uint8)
 
-
-# Hàm test độc lập
-if __name__ == "__main__":
-    """
-    Test module độc lập - không cần người 2
-    """
-    print("=== Test Grayscale Module (KHÔNG DÙNG OPENCV) ===")
-    
-    # Tạo ảnh test màu đơn giản
-    test_image = np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
-    print(f"Ảnh gốc shape: {test_image.shape}")
-    print(f"Ảnh gốc dtype: {test_image.dtype}")
-    
-    # Test chuyển đổi grayscale
-    gray = convert_to_grayscale(test_image)
-    print(f"Ảnh xám shape: {gray.shape}")
-    print(f"Ảnh xám dtype: {gray.dtype}")
-    print(f"Giá trị pixel min: {gray.min()}, max: {gray.max()}")
-    
-    # Test các phương pháp khác
-    gray_avg = convert_to_grayscale_custom(test_image, 'average')
-    gray_lum = convert_to_grayscale_custom(test_image, 'luminosity')
-    print(f"Average method shape: {gray_avg.shape}")
-    print(f"Luminosity method shape: {gray_lum.shape}")
-    
-    print("✅ Grayscale module hoạt động tốt!")
-

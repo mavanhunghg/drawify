@@ -19,7 +19,7 @@ export const fileToBase64 = (file) => {
 /**
  * API Preprocessing: Grayscale + Smoothing (Người 1 - Hiến)
  */
-export const preprocessImage = async (imageBase64, method = 'bilateral', intensity = 'medium') => {
+export const preprocessImage = async (imageBase64, method = 'bilateral', intensity = 'medium', useOpenCV = true) => {
   try {
     const response = await fetch(`${API_BASE_URL}/preprocess`, {
       method: 'POST',
@@ -30,6 +30,7 @@ export const preprocessImage = async (imageBase64, method = 'bilateral', intensi
         image: imageBase64,
         method: method,
         intensity: intensity,
+        use_opencv: useOpenCV,
       }),
     });
 

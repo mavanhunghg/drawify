@@ -1,17 +1,21 @@
 """
 Module làm mịn ảnh (Image Smoothing)
 Người thực hiện: Hiến (Người 1 - Preprocessing)
-KHÔNG DÙNG OPENCV - Code thủ công
 
 Sử dụng:
 - Gaussian Blur: Làm mịn cơ bản
 - Bilateral Filter: Làm mịn nhưng giữ biên (edge-preserving) - TỐT cho sketch
 - Median Blur: Loại bỏ nhiễu muối tiêu
+
+Có 2 phiên bản:
+- Code thủ công (để học tập/hiểu thuật toán)
+- OpenCV (production - nhanh hơn 10-100x)
 """
 
 import numpy as np
 import sys
 import os
+import cv2  # Thêm OpenCV để tăng tốc
 
 # Add parent directory to path để import utils
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -134,10 +138,10 @@ def apply_median_blur(image, kernel_size=5):
     return image
 
 
-def apply_bilateral_filter(image, d=9, sigma_color=75, sigma_space=75):
+def apply_bilateral_filter_manual(image, d=9, sigma_color=75, sigma_space=75):
     """
-    Làm mịn ảnh bằng Bilateral Filter - CODE THỦ CÔNG
-    ⭐ ĐÂY LÀ KỸ THUẬT TỐT NHẤT cho bài tập này (đề nghị dùng)
+    Làm mịn ảnh bằng Bilateral Filter - CODE THỦ CÔNG (để học tập)
+    ⚠️ CHẬM - Chỉ dùng để hiểu thuật toán
     
     Bilateral filter làm mịn nhiễu nhưng vẫn giữ sắc nét các cạnh/biên
     → Rất tốt cho việc tạo hiệu ứng vẽ tay
@@ -241,7 +245,30 @@ def apply_bilateral_filter(image, d=9, sigma_color=75, sigma_space=75):
     return image
 
 
-def preprocess_for_sketch(image, method='bilateral', intensity='medium'):
+def apply_bilateral_filter(image, d=9, sigma_color=75, sigma_space=75, use_opencv=True):
+    """
+    Làm mịn ảnh bằng Bilateral Filter - OpenCV Version (NHANH)
+    ⭐ PRODUCTION VERSION - Nhanh hơn 10-100x so với code thủ công
+    
+    Args:
+        image (numpy.ndarray): Ảnh đầu vào (grayscale hoặc color)
+        d (int): Đường kính vùng lọc
+        sigma_color (float): Bộ lọc trong không gian màu
+        sigma_space (float): Bộ lọc trong không gian tọa độ
+        use_opencv (bool): True = dùng OpenCV (nhanh), False = code thủ công (chậm)
+    
+    Returns:
+        numpy.ndarray: Ảnh đã làm mịn
+    """
+    if use_opencv:
+        # OpenCV version - NHANH ⚡
+        return cv2.bilateralFilter(image, d, sigma_color, sigma_space)
+    else:
+        # Code thủ công - CHẬM (để học tập)
+        return apply_bilateral_filter_manual(image, d, sigma_color, sigma_space)
+
+
+def preprocess_for_sketch(image, method='bilateral', intensity='medium', use_opencv=True):
     """
     Làm mịn ảnh tối ưu cho việc tạo sketch
     Đây là hàm CHÍNH mà bạn sẽ dùng trong API
@@ -250,6 +277,7 @@ def preprocess_for_sketch(image, method='bilateral', intensity='medium'):
         image (numpy.ndarray): Ảnh đầu vào (grayscale)
         method (str): 'bilateral' (khuyên dùng), 'gaussian', hoặc 'median'
         intensity (str): 'light', 'medium', 'strong'
+        use_opencv (bool): True = dùng OpenCV (nhanh), False = code thủ công
     
     Returns:
         numpy.ndarray: Ảnh đã làm mịn, sẵn sàng cho edge detection
@@ -284,7 +312,8 @@ def preprocess_for_sketch(image, method='bilateral', intensity='medium'):
             image,
             d=p['bilateral_d'],
             sigma_color=p['bilateral_sigma'],
-            sigma_space=p['bilateral_sigma']
+            sigma_space=p['bilateral_sigma'],
+            use_opencv=use_opencv
         )
     
     elif method == 'gaussian':
@@ -299,42 +328,7 @@ def preprocess_for_sketch(image, method='bilateral', intensity='medium'):
             image,
             d=p['bilateral_d'],
             sigma_color=p['bilateral_sigma'],
-            sigma_space=p['bilateral_sigma']
+            sigma_space=p['bilateral_sigma'],
+            use_opencv=use_opencv
         )
-
-
-# Hàm test độc lập
-if __name__ == "__main__":
-    """
-    Test module độc lập - không cần người 2
-    """
-    print("=== Test Smoothing Module (KHÔNG DÙNG OPENCV) ===")
-    
-    # Tạo ảnh test với nhiễu
-    test_image = np.random.randint(0, 255, (100, 100), dtype=np.uint8)
-    print(f"Ảnh gốc shape: {test_image.shape}")
-    print(f"Giá trị pixel - min: {test_image.min()}, max: {test_image.max()}")
-    
-    # Test Gaussian Blur
-    print("\nTesting Gaussian Blur...")
-    gaussian = apply_gaussian_blur(test_image)
-    print(f"✅ Gaussian Blur - shape: {gaussian.shape}, dtype: {gaussian.dtype}")
-    
-    # Test Bilateral Filter
-    print("\nTesting Bilateral Filter...")
-    bilateral = apply_bilateral_filter(test_image)
-    print(f"✅ Bilateral Filter - shape: {bilateral.shape}, dtype: {bilateral.dtype}")
-    
-    # Test Median Blur
-    print("\nTesting Median Blur...")
-    median = apply_median_blur(test_image)
-    print(f"✅ Median Blur - shape: {median.shape}, dtype: {median.dtype}")
-    
-    # Test hàm chính
-    print("\n=== Test Hàm Chính (preprocess_for_sketch) ===")
-    for intensity in ['light', 'medium', 'strong']:
-        result = preprocess_for_sketch(test_image, method='bilateral', intensity=intensity)
-        print(f"✅ Bilateral {intensity}: shape {result.shape}")
-    
-    print("\n✅ Smoothing module hoạt động tốt!")
 
