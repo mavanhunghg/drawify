@@ -1,40 +1,60 @@
-# Drawify Backend - Preprocessing Module
+# Drawify Backend - Photo to Sketch
 
-## Tác giả
-Hiến
+## Team
+- **Hiến**: Grayscale Conversion + Image Smoothing (Preprocessing)
+- **Hùng**: Edge Detection + Sketch Effect
 
-## Chức năng
-- Grayscale Conversion: Chuyển ảnh màu sang xám
-- Image Smoothing: Bilateral Filter, Gaussian Blur, Median Blur
+## Features
+- ✅ Grayscale Conversion (weighted average)
+- ✅ Image Smoothing (Bilateral, Gaussian, Median)
+- ✅ Edge Detection (Canny, Sobel, Laplacian)
+- ✅ Sketch Effect (Pencil, Natural, Enhanced)
 
 ## API Endpoints
 
-### POST `/api/preprocess`
-Xử lý grayscale + smoothing
+### POST `/api/preprocess` (Hiến)
+Grayscale + Smoothing preprocessing
 
 **Parameters:**
 - `image`: base64 string hoặc file upload
 - `method`: bilateral (default), gaussian, median
 - `intensity`: light, medium (default), strong
-- `use_opencv`: true (default), false
+
+### POST `/api/sketch` (Hùng)
+Edge Detection + Sketch Effect
+
+**Parameters:**
+- `image`: base64 string
+- `smoothing_method`: bilateral (default)
+- `intensity`: light, medium (default), strong
+- `edge_method`: canny (default), sobel, laplacian
+- `detail_level`: pencil (default), natural, medium, enhanced
+
+### POST `/api/full-pipeline` (Hiến + Hùng)
+Full pipeline: Preprocessing → Edge Detection → Sketch
+
+**Parameters:**
+- `image`: base64 string
+- `smoothing_method`: bilateral (default)
+- `intensity`: light (default), medium, strong
+- `edge_method`: canny (default), sobel, laplacian
+- `detail_level`: pencil (default), natural, enhanced
 
 **Response:**
 ```json
 {
   "success": true,
   "image": "data:image/png;base64,...",
-  "message": "Xử lý thành công",
-  "shape": [height, width]
+  "message": "Success",
+  "shape": [height, width],
+  "pipeline": {
+    "preprocessing": {...},
+    "sketch": {...}
+  }
 }
 ```
 
-### POST `/api/grayscale`
-Chỉ chuyển sang grayscale
-
-### GET `/health`
-Kiểm tra server status
-
-## Cài đặt
+## Setup
 
 ```bash
 pip install -r requirements.txt
@@ -42,3 +62,8 @@ python app.py
 ```
 
 Server: http://localhost:5000
+
+## Tech Stack
+- NumPy, OpenCV, Pillow
+- Flask + CORS
+- Custom algorithms with OpenCV optimization
