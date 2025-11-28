@@ -13,28 +13,18 @@ import base64
 import os
 import sys
 
-# Import các module xử lý ảnh của Hiến
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
 from image_processing.grayscale import convert_to_grayscale
 from image_processing.smoothing import preprocess_for_sketch
 
-# Khởi tạo Flask app
 app = Flask(__name__)
-CORS(app)  # Cho phép frontend gọi API
-
-# Cấu hình
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max 16MB
+CORS(app)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 def decode_image_from_request(request_data):
-    """
-    Giải mã ảnh từ request (base64 hoặc file upload)
-    
-    Returns:
-        numpy.ndarray: Ảnh đã decode (RGB format)
-    """
-    # Case 1: Base64 string
+    """Giải mã ảnh từ request (base64 hoặc file upload)"""
     if 'image' in request_data:
         try:
             image_data = request_data['image']
@@ -51,7 +41,7 @@ def decode_image_from_request(request_data):
         except Exception as e:
             raise ValueError(f"Lỗi decode base64: {str(e)}")
     
-    # Case 2: File upload
+   
     if 'file' in request.files:
         file = request.files['file']
         if file.filename == '':
@@ -71,69 +61,34 @@ def decode_image_from_request(request_data):
     raise ValueError("Không tìm thấy ảnh trong request")
 
 def encode_image_to_base64(image):
-    """
-    Encode ảnh numpy array sang base64 string
-    
-    Args:
-        image (numpy.ndarray): Ảnh cần encode
-    
-    Returns:
-        str: Base64 string
-    """
-    # Convert numpy array sang PIL Image
-    if len(image.shape) == 2:  # Grayscale
+    """Encode ảnh numpy array sang base64 string"""
+    if len(image.shape) == 2:
         pil_image = Image.fromarray(image.astype(np.uint8), mode='L')
-    else:  # RGB
+    else:
         pil_image = Image.fromarray(image.astype(np.uint8), mode='RGB')
     
-    # Encode thành PNG
     buffer = io.BytesIO()
     pil_image.save(buffer, format='PNG')
     buffer.seek(0)
-    
-    # Convert sang base64
     image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
     return f"data:image/png;base64,{image_base64}"
 
-# ============================================
-# API PREPROCESSING (HIẾN)
-# ============================================
-
 @app.route('/api/preprocess', methods=['POST'])
 def preprocess_image():
-    """
-    API xử lý tiền xử lý ảnh: Grayscale + Smoothing
-    
-    Input (JSON hoặc FormData):
-        - image: base64 string HOẶC file upload
-        - method: 'bilateral' (khuyên dùng), 'gaussian', 'median' (optional)
-        - intensity: 'light', 'medium', 'strong' (optional)
-    
-    Output (JSON):
-        - success: True/False
-        - image: base64 string (ảnh đã xử lý)
-        - message: thông báo
-    """
+    """API xử lý tiền xử lý ảnh: Grayscale + Smoothing"""
     try:
-        # 1. Nhận ảnh từ request
         if request.is_json:
             data = request.get_json()
         else:
             data = request.form.to_dict()
         
         image = decode_image_from_request({**data, **request.files})
-        
-        # 2. Lấy tham số
         method = request.form.get('method', 'bilateral') if not request.is_json else data.get('method', 'bilateral')
         intensity = request.form.get('intensity', 'medium') if not request.is_json else data.get('intensity', 'medium')
+        use_opencv = request.form.get('use_opencv', 'true').lower() == 'true' if not request.is_json else data.get('use_opencv', True)
         
-        # 3. Xử lý: Grayscale
         gray_image = convert_to_grayscale(image)
-        
-        # 4. Xử lý: Smoothing
-        smooth_image = preprocess_for_sketch(gray_image, method=method, intensity=intensity)
-        
-        # 5. Encode kết quả
+        smooth_image = preprocess_for_sketch(gray_image, method=method, intensity=intensity, use_opencv=use_opencv)
         result_base64 = encode_image_to_base64(smooth_image)
         
         return jsonify({
@@ -153,9 +108,7 @@ def preprocess_image():
 
 @app.route('/api/grayscale', methods=['POST'])
 def grayscale_only():
-    """
-    API chỉ chuyển ảnh sang xám (không smoothing)
-    """
+    """API chỉ chuyển ảnh sang xám"""
     try:
         if request.is_json:
             data = request.get_json()
@@ -179,15 +132,9 @@ def grayscale_only():
             'message': f'Lỗi: {str(e)}'
         }), 400
 
-# ============================================
-# HEALTH CHECK & INFO
-# ============================================
-
 @app.route('/')
 def home():
-    """
-    Trang chủ API
-    """
+    """Trang chủ API"""
     return jsonify({
         'project': 'Drawify - Image Preprocessing',
         'version': '1.0',
@@ -207,14 +154,8 @@ def home():
 
 @app.route('/health')
 def health_check():
-    """
-    Kiểm tra server hoạt động
-    """
+    """Kiểm tra server hoạt động"""
     return jsonify({'status': 'healthy', 'message': 'Server đang chạy tốt!'})
-
-# ============================================
-# RUN SERVER
-# ============================================
 
 if __name__ == '__main__':
     print("🚀 Starting Drawify Preprocessing API...")
