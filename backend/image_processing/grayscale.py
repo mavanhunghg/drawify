@@ -1,10 +1,9 @@
-"""Module chuyển đổi ảnh màu sang ảnh xám"""
 
 import numpy as np
 
 
 def convert_to_grayscale(image):
-    """Chuyển đổi ảnh màu sang ảnh xám - Gray = 0.299*R + 0.587*G + 0.114*B"""
+
     if len(image.shape) == 2:
         return image.astype(np.uint8)
     

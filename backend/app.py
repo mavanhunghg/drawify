@@ -1,4 +1,3 @@
-"""Flask API cho dự án Drawify - Photo to Sketch"""
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -23,7 +22,6 @@ CORS(app)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 def decode_image_from_request(request_data):
-    """Giải mã ảnh từ request"""
     if 'image' in request_data:
         try:
             image_data = request_data['image']
@@ -59,7 +57,7 @@ def decode_image_from_request(request_data):
     raise ValueError("Không tìm thấy ảnh trong request")
 
 def encode_image_to_base64(image):
-    """Encode ảnh numpy array sang base64 string"""
+#  Chuyển numpy array thành base64 string
     if len(image.shape) == 2:
         pil_image = Image.fromarray(image.astype(np.uint8), mode='L')
     else:
@@ -73,7 +71,7 @@ def encode_image_to_base64(image):
 
 @app.route('/api/preprocess', methods=['POST'])
 def preprocess_image():
-    """API preprocessing: Grayscale + Smoothing"""
+#  API preprocessing: Grayscale + Smoothing
     try:
         if request.is_json:
             data = request.get_json()
@@ -108,7 +106,7 @@ def preprocess_image():
 
 @app.route('/api/grayscale', methods=['POST'])
 def grayscale_only():
-    """API chỉ chuyển ảnh sang xám"""
+#  API chỉ chuyển ảnh sang xám
     try:
         if request.is_json:
             data = request.get_json()
@@ -134,7 +132,7 @@ def grayscale_only():
 
 @app.route('/')
 def home():
-    """Trang chủ API"""
+#  Trang chủ API
     return jsonify({
         'project': 'Drawify - Photo to Sketch',
         'version': '2.0',
@@ -155,7 +153,7 @@ def home():
 
 @app.route('/api/sketch', methods=['POST'])
 def create_sketch():
-    """API tạo sketch effect"""
+#  API tạo sketch effect
     try:
         if request.is_json:
             data = request.get_json()
@@ -203,7 +201,7 @@ def create_sketch():
 
 @app.route('/api/full-pipeline', methods=['POST'])
 def full_pipeline_endpoint():
-    """API pipeline đầy đủ"""
+#  API pipeline đầy đủ
     try:
         if request.is_json:
             data = request.get_json()
