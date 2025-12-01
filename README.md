@@ -2,11 +2,15 @@
 
 Convert photos to paintings/sketches
 
+## Team
+- **Hiến**: Grayscale Conversion + Image Smoothing
+- **Hùng**: Edge Detection + Sketch Effect
+
 ## Features
 - Grayscale Conversion
 - Image Smoothing (Bilateral, Gaussian, Median)
-- Edge Detection (Coming soon)
-- Sketch Effect (Coming soon)
+- Edge Detection (Sobel, Laplacian, Canny)
+- Sketch Effect (Dodge blending)
 
 ## Structure
 
@@ -42,5 +46,5 @@ npm run dev
 3. Upload image and process
 
 ## Tech Stack
-- Backend: Flask, NumPy, OpenCV, Pillow
+- Backend: Flask, NumPy, OpenCV, Pillow, Scipy
 - Frontend: React, Vite
