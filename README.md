@@ -2,6 +2,7 @@
 
 Convert photos to paintings/sketches
 
+
 ## Team
 - **Hiến**: Grayscale Conversion + Image Smoothing
 - **Hùng**: Edge Detection + Sketch Effect
